@@ -1,2 +1,0 @@
-fastpeople
--DCATKIN_DEVEL_PREFIX=/home/dfk/Documents/Developer/faSTPeople/ros/devel -DCMAKE_INSTALL_PREFIX=/home/dfk/Documents/Developer/faSTPeople/ros/install -G Unix Makefiles
