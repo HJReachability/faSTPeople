@@ -42,6 +42,9 @@
 
 #include <fastpeople/environment/stpeople_environment.h>
 
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+
 namespace fastrack {
 namespace environment {
 
@@ -76,25 +79,31 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 
   // Set up all the subscribers.
   for (const auto &topic : topics_) {
-    traj_subs_.emplace_back(
-        nl.subscribe(topic.c_str(), 1,
-                     [&topic, this](const fastrack_msgs::Trajectory::ConstPtr &msg) {
-                       this->TrajectoryCallback(topic, msg);
-                     }));
+    // Generate a lambda function for this callback.
+    boost::function<void(const fastrack_msgs::Trajectory::ConstPtr &,
+                         const std::string &)>
+        callback = [this](const fastrack_msgs::Trajectory::ConstPtr &msg,
+                          const std::string &topic) {
+          TrajectoryCallback(msg, topic);
+        }; // callback
+
+    // Create a new subscriber with this callback.
+    traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::Trajectory>(
+        topic.c_str(), 1, boost::bind(callback, _1, topic)));
   }
 }
 
 // Implement pure virtual sensor callback from base class to handle new
 // occupancy grid time msgs.
 void STPeopleEnvironment::SensorCallback(
-    const fastpeople_msgs::OccupancyGridTime::ConstPtr &msg) {
+    const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
   // TODO!
 }
 
 // Generic callback to handle a new trajectory msg coming from robot on
 // the given topic.
 void STPeopleEnvironment::TrajectoryCallback(
-    const std::string &topic, const fastrack_msgs::Trajectory::ConstPtr &msg) {
+    const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
   // TODO!
 }
 

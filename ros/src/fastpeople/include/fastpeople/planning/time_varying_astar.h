@@ -65,7 +65,7 @@ public:
                      double start_time = 0.0) const;
 
 private:
-  // Load parameters. Be sure to call the base Planner::LoadParameters.
+  // Load parameters. Be sure to call the base KinematicPlanner::LoadParameters.
   bool LoadParameters(const ros::NodeHandle &n);
 }; //\class TimeVaryingAStar
 
@@ -76,16 +76,16 @@ private:
 // NOTE! The states in the output trajectory are essentially configurations.
 template <typename S, typename E, typename B, typename SB>
 Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
-                                                  double start_time) {
+                                                  double start_time) const {
   // TODO!
   return Trajectory<S>();
 }
 
-// Load parameters. Be sure to call the base Planner::LoadParameters.
+// Load parameters. Be sure to call the base KinematicPlanner::LoadParameters.
 template <typename S, typename E, typename B, typename SB>
 bool TimeVaryingAStar<S, E, B, SB>::LoadParameters(const ros::NodeHandle &n) {
-  if (!Planner::LoadParameters(n)) {
-    ROS_ERROR("%s: Planner could not load parameters.", name_.c_str());
+  if (!KinematicPlanner<S, E, B, SB>::LoadParameters(n)) {
+    ROS_ERROR("%s: Planner could not load parameters.", this->name_.c_str());
     return false;
   }
 

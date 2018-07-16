@@ -97,8 +97,8 @@ private:
 
   // Generic callback to handle a new trajectory msg coming from robot on
   // the given topic.
-  void TrajectoryCallback(const std::string &topic,
-                          const fastrack_msgs::Trajectory::ConstPtr &msg);
+  void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr &msg,
+                          const std::string &topic);
 
   // Topics on which other robots' trajectories will be published.
   std::vector<std::string> topics_;

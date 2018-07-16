@@ -49,3 +49,6 @@ deploy_key.pub
 *.dylib
 *.la
 *.a
+
+# Crazyflie human stuff
+ros/src/crazyflie_human
