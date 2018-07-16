@@ -40,6 +40,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <fastpeople/environment/stpeople_environment.h>
+
 namespace fastrack {
 namespace environment {
 
@@ -64,7 +66,7 @@ bool STPeopleEnvironment::LoadParameters(const ros::NodeHandle &n) {
 
 // Register callbacks. This should still call Environment::RegisterCallbacks.
 bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
-  if (!Environment<fastpeople_msgs::OccupancyGridTime,
+  if (!Environment<crazyflie_human::OccupancyGridTime,
                    Empty>::RegisterCallbacks(n)) {
     ROS_ERROR("%s: Environment register callbacks failed.", name_.c_str());
     return false;
@@ -76,8 +78,8 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
   for (const auto &topic : topics_) {
     traj_subs_.emplace_back(
         nl.subscribe(topic.c_str(), 1,
-                     [&topic](const fastrack_msgs::Trajectory::ConstPtr &msg) {
-                       TrajectoryCallback(topic, msg);
+                     [&topic, this](const fastrack_msgs::Trajectory::ConstPtr &msg) {
+                       this->TrajectoryCallback(topic, msg);
                      }));
   }
 }

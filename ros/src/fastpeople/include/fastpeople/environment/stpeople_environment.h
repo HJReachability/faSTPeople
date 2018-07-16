@@ -44,19 +44,25 @@
 #define FASTPEOPLE_ENVIRONMENT_STPEOPLE_ENVIRONMENT_H
 
 #include <fastrack/environment/environment.h>
+#include <fastrack/trajectory/trajectory.h>
 #include <fastrack/utils/types.h>
 
 #include <crazyflie_human/OccupancyGridTime.h>
+
+#include <fastrack_msgs/Trajectory.h>
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <vector>
+#include <unordered_map>
 
 namespace fastrack {
 namespace environment {
 
 using bound::Box;
+using trajectory::Trajectory;
 
 class STPeopleEnvironment
     : public Environment<crazyflie_human::OccupancyGridTime, Empty> {
@@ -70,9 +76,9 @@ public:
   bool IsValid(const Vector3d &position, const Box &bound) const;
 
   // Generate a sensor measurement.
-  fastrack_msgs::SensedSpheres SimulateSensor(const Empty &params) const {
+  crazyflie_human::OccupancyGridTime SimulateSensor(const Empty &params) const {
     throw std::runtime_error("SimulateSensor is not implemented.");
-    return fastrack_msgs::SensedSpheres();
+    return crazyflie_human::OccupancyGridTime();
   }
 
   // Derived classes must have some sort of visualization through RViz.
@@ -98,7 +104,7 @@ private:
   std::vector<std::string> topics_;
 
   // Map from topic to trajectory, and from topic to TEB.
-  std::unordered_map<std::string, Trajectory<S>> traj_registry_;
+  std::unordered_map<std::string, Trajectory<Vector3d>> traj_registry_;
   std::unordered_map<std::string, Box> bound_registry_;
 
   // One subscriber for each trajectory topic we're listening to.
