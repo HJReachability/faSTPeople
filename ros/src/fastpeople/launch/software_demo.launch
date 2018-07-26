@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- Robot suffixes. -->
+  <arg name="robot1" default=":1" />
+  <arg name="robot2" default=":2" />
+
+  <!-- Record? -->
+  <arg name="record" default="false" />
+
+  <!-- Record a rosbag. -->
+  <node pkg="rosbag"
+	      type="record"
+	      name="recorder"
+	      args="-a -o $(fastpeople)/bagfiles/sw_demo_recording.bag"
+	      if="$(arg record)">
+  </node>
+
+  <!-- ========================== Robot 1. ========================== -->
+  <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
+    <arg name="suffix" value="$(arg robot1)" />
+    <arg name="other_traj_topics" value="[/traj$(arg robot2)]" />
+  </include>
+
+  <!-- ========================== Robot 2. ========================== -->
+  <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
+    <arg name="suffix" value="$(arg robot2)" />
+    <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
+  </include>
+</launch>
