@@ -31,11 +31,10 @@ This repository is set up so that code must be _reviewed_ by someone with write 
 1. You want to start working on a new feature, so you open up a new branch: `git checkout -b <your-git-id>/<feature-name>`
 2. Make some commits as you work on this branch, e.g. `git commit -am '<commit-msg>' && git push origin <your-git-id>/<feature-name>`
 3. When you're ready to merge back into `master`, first do a `rebase`. This will help keep track of any bugs that get introduced into the `master` branch. To do this, checkout the latest `master`, pull, checkout your branch, and rebase:
-  ```
-  git checkout master
-  git pull origin master
-  git checkout <your-git-id>/<feature-name>
-  git rebase origin/master
-  ```
-  and follow the directions.
+    ```
+    git checkout master
+    git pull origin master
+    git checkout <your-git-id>/<feature-name>
+    git rebase origin/master
+    ```
 4. Now you're ready to open a PR. Go to the [web interface](https://github.com/HJReachability/faSTPeople) for this repository, find your branch, and open a PR. Write up a short description of your feature, add any release notes you want, and add reviewers. Once they approve your PR you can merge.
