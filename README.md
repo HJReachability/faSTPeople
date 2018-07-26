@@ -30,9 +30,12 @@ Please follow the following style guidelines while developing this repository.
 This repository is set up so that code must be _reviewed_ by someone with write or admin privileges before it can make it into the `master` branch. This serves two purposes: first, it forces us to know what each other are working on at a very granular level, and second, it helps enforce style and code quality. To get your code reviewed, you will need to create a new branch for the feature you're working on, commit your code there, open a pull request (PR) to `master`, request review(s) from one or more team members with write privileges, and upon approval merge into `master`. A typical workflow might look like this:
 1. You want to start working on a new feature, so you open up a new branch: `git checkout -b <your-git-id>/<feature-name>`
 2. Make some commits as you work on this branch, e.g. `git commit -am '<commit-msg>' && git push origin <your-git-id>/<feature-name>`
-3. When you're ready to merge back into `master`, first do a `rebase`. This will help keep track of any bugs that get introduced into the `master` branch. To do this, checkout the latest `master`, pull, checkout your branch, and rebase: ```
-git checkout master
-git pull origin master
-git checkout <your-git-id>/<feature-name>
-git rebase origin/master ``` and follow the directions.
+3. When you're ready to merge back into `master`, first do a `rebase`. This will help keep track of any bugs that get introduced into the `master` branch. To do this, checkout the latest `master`, pull, checkout your branch, and rebase:
+  ```
+  git checkout master
+  git pull origin master
+  git checkout <your-git-id>/<feature-name>
+  git rebase origin/master
+  ```
+  and follow the directions.
 4. Now you're ready to open a PR. Go to the [web interface](https://github.com/HJReachability/faSTPeople) for this repository, find your branch, and open a PR. Write up a short description of your feature, add any release notes you want, and add reviewers. Once they approve your PR you can merge.
