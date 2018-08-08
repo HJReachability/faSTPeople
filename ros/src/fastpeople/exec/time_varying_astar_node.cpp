@@ -54,11 +54,13 @@ namespace fs = fastrack::state;
 namespace fb = fastrack::bound;
 namespace fe = fastrack::environment;
 
+
 int main(int argc, char** argv) {
   ros::init(argc, argv, "PlannerDemo");
   ros::NodeHandle n("~");
 
-  fastrack::planning::TimeVaryingAStar<
+  /*
+  fp::TimeVaryingAStar<
     fs::PositionVelocity, fe::STPeopleEnvironment, fb::Box,
     fastrack_srvs::TrackingBoundBox> planner;
 
@@ -67,8 +69,9 @@ int main(int argc, char** argv) {
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;
   }
+  */
 
   ros::spin();
 
   return EXIT_SUCCESS;
-}
+};
