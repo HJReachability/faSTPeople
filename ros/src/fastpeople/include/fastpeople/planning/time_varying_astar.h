@@ -309,9 +309,9 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     RemoveFromMultiset(next, open); 
 
     // Check if this guy is the goal.
-    if (std::abs(next->point_(0) - end(0)) < grid_resolution_/2.0 &&
-  std::abs(next->point_(1) - end(1)) < grid_resolution_/2.0 &&
-  std::abs(next->point_(2) - end(2)) < grid_resolution_/2.0){
+    if (std::abs(next->point_(0) - end.X()) < grid_resolution_/2.0 &&
+  std::abs(next->point_(1) - end.Y()) < grid_resolution_/2.0 &&
+  std::abs(next->point_(2) - end.Z()) < grid_resolution_/2.0){
       const typename Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
   next : next->parent_;
 
