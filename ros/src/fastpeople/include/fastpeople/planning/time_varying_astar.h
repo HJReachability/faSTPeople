@@ -112,7 +112,7 @@ private:
 
     // Member variables.
     const size_t id_;
-    const Vector3d point_;
+    const S point_;
     const ConstPtr parent_;
     const double time_;
     const double cost_to_come_;
@@ -121,7 +121,7 @@ private:
     double collision_prob_;
 
     // Factory method.
-    static inline Ptr Create(const Vector3d& point,
+    static inline Ptr Create(const S& point,
                                   const ConstPtr& parent,
                                   double time,
                                   double cost_to_come,
@@ -133,7 +133,7 @@ private:
     inline void PrintNode(const double start_time=0.0) const {
       std::cout << "---- Node Info: ----\n";
       std::cout << "  id: " << id_ << std::endl;
-      std::cout << "  point: [" << point_.transpose() << "]" << std::endl;
+      std::cout << "  point: [" << point_.Configuration().transpose() << "]" << std::endl;
       std::cout << "  time: " << (time_ - start_time) << std::endl;
       std::cout << "  cost_to_come: " << cost_to_come_ << std::endl;
       std::cout << "  heuristic: " << heuristic_ << std::endl;
@@ -156,7 +156,7 @@ private:
       inline bool operator()(const Node::Ptr& node1,
                              const Node::Ptr& node2) const {
          return (std::abs(node1->time_ - node2->time_) < 1e-8 &&
-              node1->point_.isApprox(node2->point_, 1e-8));
+              node1->point_.Configuration().isApprox(node2->point_.Configuration(), 1e-8));
       }
     }; // class NodeEqual
 
@@ -168,9 +168,9 @@ private:
         // Hash this node's contents together.
         //   boost::hash_combine(seed, boost::hash_value(node->priority_));
         boost::hash_combine(seed, boost::hash_value(node->time_));
-        boost::hash_combine(seed, boost::hash_value(node->point_(0)));
-        boost::hash_combine(seed, boost::hash_value(node->point_(1)));
-        boost::hash_combine(seed, boost::hash_value(node->point_(2)));
+        boost::hash_combine(seed, boost::hash_value(node->point_.X()));
+        boost::hash_combine(seed, boost::hash_value(node->point_.Y()));
+        boost::hash_combine(seed, boost::hash_value(node->point_.Z()));
         //        boost::hash_combine(seed, boost::hash_value(node->parent_));
 
         return seed;
@@ -178,7 +178,7 @@ private:
     };
 
   private:
-    explicit Node(const Vector3d& point, const ConstPtr& parent,
+    explicit Node(const S& point, const ConstPtr& parent,
                   double time, double cost_to_come, double heuristic)
       : id_(num_nodes_++),
         point_(point), 
@@ -309,9 +309,9 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     RemoveFromMultiset(next, open); 
 
     // Check if this guy is the goal.
-    if (std::abs(next->point_(0) - end.X()) < grid_resolution_/2.0 &&
-  std::abs(next->point_(1) - end.Y()) < grid_resolution_/2.0 &&
-  std::abs(next->point_(2) - end.Z()) < grid_resolution_/2.0){
+    if (std::abs(next->point_.X() - end.X()) < grid_resolution_/2.0 &&
+  std::abs(next->point_.Y() - end.Y()) < grid_resolution_/2.0 &&
+  std::abs(next->point_.Z() - end.Z()) < grid_resolution_/2.0){
       const typename Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
   next : next->parent_;
 
@@ -429,7 +429,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::Con
   // option 1: parent->cost_to_come_ + dt
   // option 2 (doesn't work!): parent->cost_to_come_ + dt + 0.001*(parent->point_ - point).norm();
   // option 3: parent->cost_to_come_ + (parent->point_ - point).norm();
-  return parent->cost_to_come_ + dt + (parent->point_ - point).norm();
+  return parent->cost_to_come_ + dt + (parent->point_ - point).Configuration().norm();
 }
 
 
@@ -442,7 +442,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point,
   // option 1: ComputeBestTime(point, stop)
   // option 2 (doesn't work!): ComputeBestTime(point, stop) + (point - stop).norm()*0.1
   // option 3: (point - stop).norm();
-  return ComputeBestTime(point,stop) + (point - stop).norm();
+  return ComputeBestTime(point,stop) + (point - stop).Configuration().norm();
 }
 
 
@@ -450,7 +450,7 @@ template <typename S, typename E, typename B, typename SB>
 // Computes the best possible time by looking at the largest coordinate diff.
 double TimeVaryingAStar<S, E, B, SB>::ComputeBestTime(const S& point, 
     const S& stop) const {
-  S diff = (point - stop).cwiseAbs();
+  S diff = (point - stop).Configuration().cwiseAbs();
   double max_diff = std::max(diff[0], std::max(diff[1], diff[2]));
   return max_diff/max_speed_;
 }
@@ -463,15 +463,21 @@ std::vector<S> TimeVaryingAStar<S, E, B, SB>::Neighbors(const S& point) const {
   std::vector<S> neighbors;
 
   // Add all the 27 neighbors (including the point itself).
-  for (double x = point(0) - grid_resolution_;
-       x < point(0) + grid_resolution_ + 1e-8;
+  VectorXd config = point.Configuration();
+  for (double x = config(0) - grid_resolution_;
+       x < config(0) + grid_resolution_ + 1e-8;
        x += grid_resolution_) {
-    for (double y = point(1) - grid_resolution_;
-         y < point(1) + grid_resolution_ + 1e-8;
+    for (double y = config(1) - grid_resolution_;
+         y < config(1) + grid_resolution_ + 1e-8;
          y += grid_resolution_) {
 
       // TODO THIS IS A HACK!
-      neighbors.push_back(Vector3d(x, y, point(2)));
+      VectorXd new_config = point.Configuration();
+      new_config(0) = x;
+      new_config(2) = y;
+      S s;
+      s.FromVector(new_config);
+      neighbors.push_back(s);
 
       //for (double z = point(2) - grid_resolution_;
       //     z < point(2) + grid_resolution_ + 1e-8;
@@ -498,7 +504,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
 
   // Compute the unit vector pointing from start to stop.
   const S direction = (same_pt) ? S::Zero() : 
-    static_cast<S>((stop - start) / (stop - start).norm());
+    static_cast<S>((stop - start) / (stop - start).Configuration().norm());
 
   // Compute the dt between query points.
   const double dt = (same_pt) ? (stop_time-start_time)*0.1 : 
