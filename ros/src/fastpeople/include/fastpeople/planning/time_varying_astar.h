@@ -80,13 +80,13 @@ public:
   }
   */
 
-  explicit TimeVaryingAStar(const typename E::ConstPtr& space,
+  explicit TimeVaryingAStar(const E space,
                             double grid_resolution,
                             double collision_check_resolution)
     : space_(space),
       grid_resolution_(grid_resolution),
       collision_check_resolution_(collision_check_resolution){
-        KinematicPlanner<S, E, B, SB>();
+        //KinematicPlanner<S, E, B, SB>();
       }
 
 
@@ -251,31 +251,30 @@ private:
 template <typename S, typename E, typename B, typename SB>
 Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
                                                   double start_time) const {
-  /*
   const ros::Time plan_start_time = ros::Time::now();
   const double kStayPutTime = 1.0;
 
   // Make a set for the open set. This stores the candidate "fringe" nodes 
   // we might want to expand. This is sorted by priority and allows multiple 
   // nodes with the same priority to be in the list. 
-  std::multiset<Node::Ptr, typename Node::NodeComparitor> open;
+  typename std::multiset<typename Node::Ptr, typename Node::NodeComparitor> open;
 
   // Make a hash set for the open set. The key in this hash table
   // is space-time for a node. This is used to find nodes with the same 
   // space-time key in log time.
-  std::unordered_set<Node::Ptr, 
+  typename std::unordered_set<typename Node::Ptr, 
     typename Node::NodeHasher, typename Node::NodeEqual> open_registry;
 
   // Make a hash set for the closed set. The key in this hash table
   // is space-time for a node. This is used to find nodes with the same 
   // space-time key in log time.
-  std::unordered_set<Node::Ptr, 
+  typename std::unordered_set<typename Node::Ptr, 
          typename Node::NodeHasher, typename Node::NodeEqual> closed_registry;
 
   // Initialize the priority queue.
   const double start_cost = 0.0;
-  const double start_heuristic = ComputeHeuristic(start, stop);
-  const Node::Ptr start_node =
+  const double start_heuristic = ComputeHeuristic(start, end);
+  const typename Node::Ptr start_node =
     Node::Create(start, nullptr, start_time, start_cost, start_heuristic);
 
   open.insert(start_node);
@@ -289,42 +288,42 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     open.size(), open_registry.size());
     }
 
-    if ((ros::Time::now() - plan_start_time).toSec() > budget)
-      return nullptr;
+    //if ((ros::Time::now() - plan_start_time).toSec() > budget)
+    //  return nullptr;
 
     if (open.empty()){
-      ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", name_.c_str());
+      ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", KinematicPlanner<S, E, B, SB>::name_.c_str());
       return nullptr;
     }
 
-    const Node::Ptr next = *open.begin();
+    const typename Node::Ptr next = *open.begin();
 
     // TODO this is for debugging!
     next->PrintNode(start_time);
     
     ROS_INFO("%s: Open list size: %zu, Next priority: %f", 
-       name_.c_str(), open.size(), next->priority_);
+       KinematicPlanner<S, E, B, SB>::name_.c_str(), open.size(), next->priority_);
 
     // Pop the next node from the open_registry and open set.
     open_registry.erase(next); // works because keys in open_registry are unique!    
     RemoveFromMultiset(next, open); 
 
     // Check if this guy is the goal.
-    if (std::abs(next->point_(0) - stop(0)) < grid_resolution_/2.0 &&
-  std::abs(next->point_(1) - stop(1)) < grid_resolution_/2.0 &&
-  std::abs(next->point_(2) - stop(2)) < grid_resolution_/2.0){
-      const Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
+    if (std::abs(next->point_(0) - end(0)) < grid_resolution_/2.0 &&
+  std::abs(next->point_(1) - end(1)) < grid_resolution_/2.0 &&
+  std::abs(next->point_(2) - end(2)) < grid_resolution_/2.0){
+      const typename Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
   next : next->parent_;
 
       // Have to connect the goal point to the last sampled grid point.
-      const double best_time = ComputeBestTime(parent_node->point_, stop);
+      const double best_time = ComputeBestTime(parent_node->point_, end);
       const double terminus_time = parent_node->time_ + best_time;
       const double terminus_cost = 
-        ComputeCostToCome(parent_node, stop, best_time);
+        ComputeCostToCome(parent_node, end, best_time);
       const double terminus_heuristic = 0.0;
 
-      const Node::Ptr terminus = 
-  Node::Create(stop, parent_node, terminus_time, terminus_cost, 
+      const typename Node::Ptr terminus = 
+  Node::Create(end, parent_node, terminus_time, terminus_cost, 
          terminus_heuristic);
       return GenerateTrajectory(terminus);
     }
@@ -333,7 +332,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     closed_registry.insert(next);
 
     // Expand and add to the list.
-    for (const Vector3d& neighbor : Neighbors(next->point_)) {
+    for (const S& neighbor : Neighbors(next->point_)) {
       // Compute the time at which we'll reach this neighbor.
       const double best_neigh_time = (neighbor.isApprox(next->point_, 1e-8)) ? 
         kStayPutTime : ComputeBestTime(next->point_, neighbor);
@@ -350,10 +349,10 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
         ComputeCostToCome(next, neighbor, best_neigh_time);
 
       // Compute heuristic from neighbor to stop.
-      const double neighbor_heuristic = ComputeHeuristic(neighbor, stop);
+      const double neighbor_heuristic = ComputeHeuristic(neighbor, end);
 
       // Discard if this is on the closed list.
-      const Node::Ptr neighbor_node =
+      const typename Node::Ptr neighbor_node =
         Node::Create(neighbor, next, neighbor_time, neighbor_cost, neighbor_heuristic);      
       if (closed_registry.count(neighbor_node) > 0) {
         neighbor_node->PrintNode(start_time);
@@ -405,8 +404,8 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     }
   }
   
-  */
-  return Trajectory<S>();
+
+  //return Trajectory<S>();
 }
 
 
@@ -537,8 +536,8 @@ void TimeVaryingAStar<S, E, B, SB>::RemoveFromMultiset(const typename Node::Ptr 
   std::multiset<typename Node::Ptr, typename Node::NodeComparitor>& open) {
   // Get the range of nodes that have equal priority to next
   std::pair<
-    std::multiset<typename Node::Ptr, typename Node::NodeComparitor>::iterator,
-    std::multiset<typename Node::Ptr, typename Node::NodeComparitor>::iterator> matches =
+    typename std::multiset<typename Node::Ptr, typename Node::NodeComparitor>::iterator,
+    typename std::multiset<typename Node::Ptr, typename Node::NodeComparitor>::iterator> matches =
      open.equal_range(next);
 
   // This guy lets us check the equality of two Nodes.
@@ -555,7 +554,6 @@ void TimeVaryingAStar<S, E, B, SB>::RemoveFromMultiset(const typename Node::Ptr 
 }
 
 
-/*
 template <typename S, typename E, typename B, typename SB>
 // Walk backward from the given node to the root to create a Trajectory.
 Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
@@ -567,7 +565,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
 
   //  std::cout << "Collision probabilities for generated trajectory:\n";
   // Populate these lists by walking backward, then reverse.
-  for (Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
+  for (typename Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
     positions.push_back(n->point_);
     times.push_back(n->time_);
     collision_probs.push_back(n->collision_prob_);
@@ -591,7 +589,6 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
   return Trajectory<S>::Trajectory(states, times); //***********************************************
   //return Trajectory::Create(times, states, values, values, collision_probs);
 }
-*/
 
 
 

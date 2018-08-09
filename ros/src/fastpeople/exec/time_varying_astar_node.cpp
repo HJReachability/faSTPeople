@@ -59,17 +59,16 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "PlannerDemo");
   ros::NodeHandle n("~");
 
-  /*
+  fe::STPeopleEnvironment sp;
   fp::TimeVaryingAStar<
     fs::PositionVelocity, fe::STPeopleEnvironment, fb::Box,
-    fastrack_srvs::TrackingBoundBox> planner;
+    fastrack_srvs::TrackingBoundBox> planner {sp, 1, 0.01};
 
   if (!planner.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize planner.",
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;
   }
-  */
 
   ros::spin();
 
