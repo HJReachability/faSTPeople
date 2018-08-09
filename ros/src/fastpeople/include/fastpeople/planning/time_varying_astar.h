@@ -86,7 +86,7 @@ public:
     : space_(space),
       grid_resolution_(grid_resolution),
       collision_check_resolution_(collision_check_resolution){
-        //KinematicPlanner<S, E, B, SB>();
+        KinematicPlanner<S, E, B, SB>();
       }
 
 
@@ -112,7 +112,7 @@ private:
 
     // Member variables.
     const size_t id_;
-    const Vector3d point_;
+    const S point_;
     const ConstPtr parent_;
     const double time_;
     const double cost_to_come_;
@@ -121,7 +121,7 @@ private:
     double collision_prob_;
 
     // Factory method.
-    static inline Ptr Create(const Vector3d& point,
+    static inline Ptr Create(const S& point,
                                   const ConstPtr& parent,
                                   double time,
                                   double cost_to_come,
@@ -156,7 +156,7 @@ private:
       inline bool operator()(const Node::Ptr& node1,
                              const Node::Ptr& node2) const {
          return (std::abs(node1->time_ - node2->time_) < 1e-8 &&
-              node1->point_.isApprox(node2->point_, 1e-8));
+              node1->point_.ToVector().isApprox(node2->point_, 1e-8));
       }
     }; // class NodeEqual
 
@@ -178,7 +178,7 @@ private:
     };
 
   private:
-    explicit Node(const Vector3d& point, const ConstPtr& parent,
+    explicit Node(const S& point, const ConstPtr& parent,
                   double time, double cost_to_come, double heuristic)
       : id_(num_nodes_++),
         point_(point), 
@@ -429,7 +429,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::Con
   // option 1: parent->cost_to_come_ + dt
   // option 2 (doesn't work!): parent->cost_to_come_ + dt + 0.001*(parent->point_ - point).norm();
   // option 3: parent->cost_to_come_ + (parent->point_ - point).norm();
-  return parent->cost_to_come_ + dt + (parent->point_ - point).norm();
+  return parent->cost_to_come_ + dt + (parent->point_ - point).ToVector().norm();
 }
 
 
@@ -442,7 +442,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point,
   // option 1: ComputeBestTime(point, stop)
   // option 2 (doesn't work!): ComputeBestTime(point, stop) + (point - stop).norm()*0.1
   // option 3: (point - stop).norm();
-  return ComputeBestTime(point,stop) + (point - stop).norm();
+  return ComputeBestTime(point,stop) + (point - stop).ToVector().norm();
 }
 
 
@@ -463,15 +463,22 @@ std::vector<S> TimeVaryingAStar<S, E, B, SB>::Neighbors(const S& point) const {
   std::vector<S> neighbors;
 
   // Add all the 27 neighbors (including the point itself).
-  for (double x = point(0) - grid_resolution_;
-       x < point(0) + grid_resolution_ + 1e-8;
+  VectorXd config = point.Configuration();
+  for (double x = config(0) - grid_resolution_;
+       x < config(0) + grid_resolution_ + 1e-8;
        x += grid_resolution_) {
-    for (double y = point(1) - grid_resolution_;
-         y < point(1) + grid_resolution_ + 1e-8;
+    for (double y = config(1) - grid_resolution_;
+         y < config(1) + grid_resolution_ + 1e-8;
          y += grid_resolution_) {
 
+      VectorXd new_config = point.Configuration();
+      new_config(0) = x;
+      new_config(1) = y;
+      S() s;
+      s.FromVector(new_config)
       // TODO THIS IS A HACK!
-      neighbors.push_back(Vector3d(x, y, point(2)));
+      neighbors.push_back(s);   
+      //neighbors.push_back(Vector3d(x, y, point(2)));
 
       //for (double z = point(2) - grid_resolution_;
       //     z < point(2) + grid_resolution_ + 1e-8;
@@ -498,12 +505,12 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
 
   // Compute the unit vector pointing from start to stop.
   const S direction = (same_pt) ? S::Zero() : 
-    static_cast<S>((stop - start) / (stop - start).norm());
+    static_cast<S>((stop - start) / (stop - start).ToVector().norm());
 
   // Compute the dt between query points.
   const double dt = (same_pt) ? (stop_time-start_time)*0.1 : 
     (stop_time - start_time) * collision_check_resolution_ / 
-    (stop - start).norm();
+    (stop - start).ToVector().norm();
 
   double collision_prob = 0.0;
   max_collision_prob = 0.0;
