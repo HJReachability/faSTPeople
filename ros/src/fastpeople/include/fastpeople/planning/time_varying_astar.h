@@ -133,7 +133,7 @@ private:
     inline void PrintNode(const double start_time=0.0) const {
       std::cout << "---- Node Info: ----\n";
       std::cout << "  id: " << id_ << std::endl;
-      std::cout << "  point: [" << point_.transpose() << "]" << std::endl;
+      std::cout << "  point: [" << point_.Configuration().transpose() << "]" << std::endl;
       std::cout << "  time: " << (time_ - start_time) << std::endl;
       std::cout << "  cost_to_come: " << cost_to_come_ << std::endl;
       std::cout << "  heuristic: " << heuristic_ << std::endl;
@@ -156,7 +156,7 @@ private:
       inline bool operator()(const Node::Ptr& node1,
                              const Node::Ptr& node2) const {
          return (std::abs(node1->time_ - node2->time_) < 1e-8 &&
-              node1->point_.ToVector().isApprox(node2->point_, 1e-8));
+              node1->point_.Configuration().isApprox(node2->point_.Configuration(), 1e-8));
       }
     }; // class NodeEqual
 
@@ -168,9 +168,9 @@ private:
         // Hash this node's contents together.
         //   boost::hash_combine(seed, boost::hash_value(node->priority_));
         boost::hash_combine(seed, boost::hash_value(node->time_));
-        boost::hash_combine(seed, boost::hash_value(node->point_(0)));
-        boost::hash_combine(seed, boost::hash_value(node->point_(1)));
-        boost::hash_combine(seed, boost::hash_value(node->point_(2)));
+        boost::hash_combine(seed, boost::hash_value(node->point_.X()));
+        boost::hash_combine(seed, boost::hash_value(node->point_.Y()));
+        boost::hash_combine(seed, boost::hash_value(node->point_.Z()));
         //        boost::hash_combine(seed, boost::hash_value(node->parent_));
 
         return seed;
@@ -309,9 +309,9 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     RemoveFromMultiset(next, open); 
 
     // Check if this guy is the goal.
-    if (std::abs(next->point_(0) - end.X()) < grid_resolution_/2.0 &&
-  std::abs(next->point_(1) - end.Y()) < grid_resolution_/2.0 &&
-  std::abs(next->point_(2) - end.Z()) < grid_resolution_/2.0){
+    if (std::abs(next->point_.X() - end.X()) < grid_resolution_/2.0 &&
+  std::abs(next->point_.Y() - end.Y()) < grid_resolution_/2.0 &&
+  std::abs(next->point_.Z() - end.Z()) < grid_resolution_/2.0){
       const typename Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
   next : next->parent_;
 
@@ -334,7 +334,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     // Expand and add to the list.
     for (const S& neighbor : Neighbors(next->point_)) {
       // Compute the time at which we'll reach this neighbor.
-      const double best_neigh_time = (neighbor.isApprox(next->point_, 1e-8)) ? 
+      const double best_neigh_time = (neighbor.Configuration().isApprox(next->point_.Configuration(), 1e-8)) ? 
         kStayPutTime : ComputeBestTime(next->point_, neighbor);
       //BestPossibleTime(next->point_, neighbor);
 
@@ -429,7 +429,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::Con
   // option 1: parent->cost_to_come_ + dt
   // option 2 (doesn't work!): parent->cost_to_come_ + dt + 0.001*(parent->point_ - point).norm();
   // option 3: parent->cost_to_come_ + (parent->point_ - point).norm();
-  return parent->cost_to_come_ + dt + (parent->point_ - point).ToVector().norm();
+  return parent->cost_to_come_ + dt + (parent->point_ - point).Configuration().norm();
 }
 
 
@@ -442,7 +442,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point,
   // option 1: ComputeBestTime(point, stop)
   // option 2 (doesn't work!): ComputeBestTime(point, stop) + (point - stop).norm()*0.1
   // option 3: (point - stop).norm();
-  return ComputeBestTime(point,stop) + (point - stop).ToVector().norm();
+  return ComputeBestTime(point,stop) + (point - stop).Configuration().norm();
 }
 
 
@@ -474,8 +474,8 @@ std::vector<S> TimeVaryingAStar<S, E, B, SB>::Neighbors(const S& point) const {
       VectorXd new_config = point.Configuration();
       new_config(0) = x;
       new_config(1) = y;
-      S() s;
-      s.FromVector(new_config)
+      S s;
+      s.FromVector(new_config);
       // TODO THIS IS A HACK!
       neighbors.push_back(s);   
       //neighbors.push_back(Vector3d(x, y, point(2)));
@@ -505,12 +505,12 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
 
   // Compute the unit vector pointing from start to stop.
   const S direction = (same_pt) ? S::Zero() : 
-    static_cast<S>((stop - start) / (stop - start).ToVector().norm());
+    static_cast<S>((stop - start) / (stop - start).Configuration().norm());
 
   // Compute the dt between query points.
   const double dt = (same_pt) ? (stop_time-start_time)*0.1 : 
     (stop_time - start_time) * collision_check_resolution_ / 
-    (stop - start).ToVector().norm();
+    (stop - start).Configuration().norm();
 
   double collision_prob = 0.0;
   max_collision_prob = 0.0;
