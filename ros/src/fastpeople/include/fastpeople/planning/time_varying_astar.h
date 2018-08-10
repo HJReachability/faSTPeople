@@ -45,10 +45,11 @@
 #ifndef FASTPEOPLE_PLANNING_TIME_VARYING_ASTAR_H
 #define FASTPEOPLE_PLANNING_TIME_VARYING_ASTAR_H
 
+#include <fastpeople/environment/stpeople_environment.h>
 #include <fastrack/planning/kinematic_planner.h>
+
 #include <set>
 #include <unordered_set>
-#include <fastpeople/environment/stpeople_environment.h>
 
 namespace fastrack {
 namespace planning {
@@ -58,10 +59,7 @@ using dynamics::Kinematics;
 template <typename S, typename E, typename B, typename SB>
 class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
 public:
-  typedef std::shared_ptr<TimeVaryingAStar> Ptr;
-  typedef std::shared_ptr<const TimeVaryingAStar> ConstPtr;
-
-  virtual ~TimeVaryingAStar() {}
+  ~TimeVaryingAStar() {}
   /*
   explicit TimeVaryingAStar(ValueFunctionId incoming_value,
                    ValueFunctionId outgoing_value,
@@ -122,10 +120,10 @@ private:
 
     // Factory method.
     static inline Ptr Create(const S& point,
-                                  const ConstPtr& parent,
-                                  double time,
-                                  double cost_to_come,
-                                  double heuristic) {
+                             const ConstPtr& parent,
+                             double time,
+                             double cost_to_come,
+                             double heuristic) {
       Ptr ptr(new Node(point, parent, time, cost_to_come, heuristic));
       return ptr;
     }
@@ -186,7 +184,7 @@ private:
         time_(time), 
         cost_to_come_(cost_to_come),
         heuristic_(heuristic),
-        priority_(heuristic+cost_to_come),
+        priority_(heuristic + cost_to_come),
         collision_prob_(0.0) {}
 
   }; //\struct Node
