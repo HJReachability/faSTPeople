@@ -73,4 +73,4 @@ int main(int argc, char** argv) {
   ros::spin();
 
   return EXIT_SUCCESS;
-};
+}
