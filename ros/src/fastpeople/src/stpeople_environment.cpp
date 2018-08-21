@@ -53,8 +53,45 @@ namespace environment {
 // Provide a separate collision check for each type of tracking error bound.
 bool STPeopleEnvironment::IsValid(const Vector3d &position,
                                   const Box &bound) const {
-  // TODO!
-  return false;
+    if (!initialized_) {
+    ROS_WARN("%s: Tried to collision check an uninitialized BallsInBox.",
+             name_.c_str());
+    return false;
+  }
+
+  // check against the boundary of the occupancy grid
+  if (position(0) < lower_(0) + bound.x ||
+      position(0) > upper_(0) - bound.x ||
+      position(1) < lower_(1) + bound.y ||
+      position(1) > upper_(1) - bound.y ||
+      position(2) < lower_(2) + bound.z ||
+      position(2) > upper_(2) - bound.z)
+    return false;
+
+  // Check against each obstacle.
+  // NOTE! Just using a linear search here for simplicity.
+  if (centers_.size() > 100)
+    ROS_WARN_THROTTLE(1.0, "%s: Caution! Linear search may be slowing you down.",
+                      name_.c_str());
+
+  const Vector3d bound_vector(bound.x, bound.y, bound.z);
+  for (size_t ii = 0; ii < centers_.size(); ii++) {
+    const Vector3d& p = centers_[ii];
+
+    // Find closest point in the tracking bound to the obstacle center.
+    Vector3d closest_point;
+    for (size_t jj = 0; jj < 3; jj++) {
+      closest_point(jj) =
+        std::min(position(jj) + bound_vector(jj),
+                 std::max(position(jj) - bound_vector(jj), p(jj)));
+    }
+
+    // Check distance to closest point.
+    if ((closest_point - p).norm() <= radii_[ii])
+      return false;
+  }
+
+  return true;
 }
 
 // Derived classes must have some sort of visualization through RViz.
@@ -64,7 +101,9 @@ void STPeopleEnvironment::Visualize() const {
 
 // Load parameters. This should still call Environment::LoadParameters.
 bool STPeopleEnvironment::LoadParameters(const ros::NodeHandle &n) {
-  // TODO!
+  ros::NodeHandle nl(n);
+  if (!nl.getParam("topic/other_trajs", topics_)) return false;
+  return Environment::LoadParameters(&n);
 }
 
 // Register callbacks. This should still call Environment::RegisterCallbacks.
@@ -108,11 +147,11 @@ std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
 
   std::unordered_map<double, std_msgs::Float64[]> og;
   double tcount = 0;
-  for(int i = 0; i < (sizeof(msg.gridarray)/sizeof(msg.gridarray[0])); ++i) {
-    if(i > 0){
-        tcount += msg.gridarray[i].header.stamp.secs - msg.gridarray[i - 1].header.stamp.secs;
+  for(std::size_t ii = 0; ii < (sizeof(msg->gridarray)/sizeof(msg->gridarray[0])); ++ii) {
+    if(ii > 0) {
+      tcount += msg->gridarray[ii].header.stamp.secs - msg->gridarray[ii - 1].header.stamp.secs;
     }
-    og.insert({tcount, msg.gridarray[i].data});
+    og.insert({tcount, msg->gridarray[ii].data});
   }
 
   return og;
@@ -123,11 +162,21 @@ std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
 // the given topic.
 void STPeopleEnvironment::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
-
+/*
   if(traj_registry_.contains(topic)) {
     traj_registry_.erase(topic);
   }
   traj_registry_.insert({topic, Trajectory(msg)});
+*/
+  auto iter = traj_registry_.find(topic);
+  if (iter == traj_registry_.end()) {
+   // This is a topic we haven't seen before.
+    traj_registry_.emplace(topic, Trajectory<S>(msg));
+  } else {
+   // We've already seen this topic, so just update the recorded trajectory.
+    iter->second = Trajectory<S>(msg);
+}
+
 
 }
 
