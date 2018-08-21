@@ -97,38 +97,14 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 // occupancy grid time msgs.
 void STPeopleEnvironment::SensorCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
-
-  occupancy_grids = MsgToOccuGrid(msg);
-}
-
-// SensorCallback helper function that turns an OccupancyGridTime message into 
-// a map from time stamps to occupancy grids (arrays)
-std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
-    const crazyflie_human::OccupancyGridTime::ConstPtr &msg){
-
-  std::unordered_map<double, std_msgs::Float64[]> og;
-  double tcount = 0;
-  for(int i = 0; i < (sizeof(msg.gridarray)/sizeof(msg.gridarray[0])); ++i) {
-    if(i > 0){
-        tcount += msg.gridarray[i].header.stamp.secs - msg.gridarray[i - 1].header.stamp.secs;
-    }
-    og.insert({tcount, msg.gridarray[i].data});
-  }
-
-  return og;
-
+  // TODO!
 }
 
 // Generic callback to handle a new trajectory msg coming from robot on
 // the given topic.
 void STPeopleEnvironment::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
-
-  if(traj_registry_.contains(topic)) {
-    traj_registry_.erase(topic);
-  }
-  traj_registry_.insert({topic, Trajectory(msg)});
-
+  // TODO!
 }
 
 } //\namespace environment
