@@ -450,6 +450,7 @@ std::vector<S> TimeVaryingAStar<S, E, B, SB>::NeighborsFinder(const S& point, Ve
     neighbors.push_back(s);
     return neighbors;
   } else {
+    VectorXd config = point.Configuration();
     for (double d = config(dimension) - grid_resolution_; 
         d < config(dimension) + grid_resolution_ + 1e-8;
         d += grid_resolution_) {
@@ -469,11 +470,10 @@ std::vector<S> TimeVaryingAStar<S, E, B, SB>::Neighbors(const S& point) const {
   return NeighborsFinder(point, new_config, dimension - 1);
 }
 
-
-template <typename S, typename E, typename B, typename SB>
 // Collision check a line segment between the two points with the given
 // initial start time. Returns true if the path is collision free and
 // false otherwise.
+template <typename S, typename E, typename B, typename SB>
 bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop,
                                     double start_time, double stop_time, 
                                     double& max_collision_prob) const {
