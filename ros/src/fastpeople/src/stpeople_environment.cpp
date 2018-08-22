@@ -53,12 +53,12 @@ namespace environment {
 // Provide a separate collision check for each type of tracking error bound.
 bool STPeopleEnvironment::IsValid(const Vector3d &position,
                                   const Box &bound,
-                                  double time = std::numeric_limits<double>::quiet_NaN()) const {
+                                  double time) const {
     if (!initialized_) {
     ROS_WARN("%s: Tried to collision check an uninitialized BallsInBox.",
              name_.c_str());
     return false;
-  }
+    }
 
   // check against the boundary of the occupancy grid
   if (position(0) < lower_(0) + bound.x ||
@@ -72,7 +72,7 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
   std::vector<Vector3d> centers(traj_registry_.size());
   std::vector<Box> tebs(bound_registry_.size());
   int i = 0;
-  for (it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
+  for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
     Box teb = bound_registry_[it->first];
     Vector3d traj_pt = it->second.Interpolate(time);
     centers[i] = traj_pt;
@@ -100,6 +100,7 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
     }
 
     // Check distance to closest point.
+    // TODO: Vehicle size!
     if ((closest_point - p).norm() <= 0.0001)
       return false;
   }
@@ -162,7 +163,7 @@ std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
   double tcount = 0;
   for(std::size_t ii = 0; ii < (sizeof(msg->gridarray)/sizeof(msg->gridarray[0])); ++ii) {
     if(ii > 0) {
-      tcount += msg->gridarray[ii].header.stamp.secs - msg->gridarray[ii - 1].header.stamp.secs;
+      tcount += (msg->gridarray[ii].header.stamp - msg->gridarray[ii - 1].header.stamp).toSec();
     }
     og.insert({tcount, msg->gridarray[ii].data});
   }
@@ -184,10 +185,10 @@ void STPeopleEnvironment::TrajectoryCallback(
   auto iter = traj_registry_.find(topic);
   if (iter == traj_registry_.end()) {
    // This is a topic we haven't seen before.
-    traj_registry_.emplace(topic, Trajectory<S>(msg));
+    traj_registry_.emplace(topic, Trajectory<Vector3d>(msg));
   } else {
    // We've already seen this topic, so just update the recorded trajectory.
-    iter->second = Trajectory<S>(msg);
+    iter->second = Trajectory<Vector3d>(msg);
 }
 
 
