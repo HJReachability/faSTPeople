@@ -308,7 +308,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
       next : next->parent_;
 
       // Have to connect the goal point to the last sampled grid point.
-      const double best_time = dynamics_.BestPossibleTime(parent_node->point_, end);
+      const double best_time = KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(parent_node->point_, end);
       const double terminus_time = parent_node->time_ + best_time;
       const double terminus_cost = 
         ComputeCostToCome(parent_node, end, best_time);
@@ -327,7 +327,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     for (const S& neighbor : Neighbors(next->point_)) {
       // Compute the time at which we'll reach this neighbor.
       const double best_neigh_time = (neighbor.Configuration().isApprox(next->point_.Configuration(), 1e-8)) ? 
-        kStayPutTime : dynamics_.BestPossibleTime(next->point_, neighbor);
+        kStayPutTime : KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(next->point_, neighbor);
       //BestPossibleTime(next->point_, neighbor);
 
       // Gotta sanity check if we got a valid neighbor time.
@@ -347,7 +347,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
       const typename Node::Ptr neighbor_node =
         Node::Create(neighbor, next, neighbor_time, neighbor_cost, neighbor_heuristic);      
       if (closed_registry.count(neighbor_node) > 0) {
-        neighbor_node->PrintNode(start_time);
+        //neighbor_node->PrintNode(start_time);
         ROS_WARN("Did not add neighbor_node because its already on the closed list.");
         continue;
       }
@@ -355,13 +355,13 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
       // Collision check this line segment (and store the collision probability)
       if (!CollisionCheck(next->point_, neighbor, next->time_, 
         neighbor_time, neighbor_node->collision_prob_)) {
-        neighbor_node->PrintNode(start_time);
+        //neighbor_node->PrintNode(start_time);
         ROS_WARN("Did not add neighbor_node because its in collision!");
         continue;
       }
 
       ROS_INFO("Adding neighbor node...");
-      neighbor_node->PrintNode(start_time);
+      //neighbor_node->PrintNode(start_time);
 
       // Check if we're in the open set.
       auto match = open_registry.find(neighbor_node);
@@ -406,7 +406,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::Con
   }
 
   if (dt < 0.0)
-    dt = dynamics_.BestPossibleTime(parent->point_, point); //BestPossibleTime(parent->point_, point);  
+    dt = KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(parent->point_, point); //BestPossibleTime(parent->point_, point);  
 
   // Cost to get to the parent contains distance + time. Add to this
   // the distance from the parent to the current point and the time
@@ -426,7 +426,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point,
   // option 1: ComputeBestTime(point, stop)
   // option 2 (doesn't work!): ComputeBestTime(point, stop) + (point - stop).norm()*0.1
   // option 3: (point - stop).norm();
-  return dynamics_.BestPossibleTime(point, stop) + (point - stop).Configuration().norm();
+  return KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(point, stop) + (point - stop).Configuration().norm();
 }
 
 /*
@@ -443,7 +443,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeBestTime(const S& point,
 // helper function populating the neighbors of a given point in all dimension
 template <typename S, typename E, typename B, typename SB>
 std::vector<S> TimeVaryingAStar<S, E, B, SB>::NeighborsFinder(const S& point, VectorXd neighbor, int dimension) const {
-  if (d==-1) {
+  if (dimension == -1) {
     std::vector<S> neighbors;
     S s;
     s.FromVector(neighbor);
@@ -496,7 +496,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
   S query(start);
   for (double time = start_time; time < stop_time; time += dt) {
     const bool valid_pt = 
-      space_->IsValid(query, bound_); //*****************************************
+      KinematicPlanner<S, E, B, SB>::space_->IsValid(query, KinematicPlanner<S, E, B, SB>::bound_); //*****************************************
       //space_->IsValid(query, incoming_value_, outgoing_value_, collision_prob, time);
 
     if (collision_prob > max_collision_prob)
@@ -561,7 +561,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
 
   // Lift positions into states.
   const std::vector<S> states =
-    KinematicPlanner<S, E, B, SB>::dynamics_->LiftGeometricTrajectory(positions, times);
+    KinematicPlanner<S, E, B, SB>::dynamics_.LiftGeometricTrajectory(positions, times);
 
   // Create dummy list containing value function IDs.
   //const std::vector<ValueFunctionId> values(states.size(), incoming_value_); 
