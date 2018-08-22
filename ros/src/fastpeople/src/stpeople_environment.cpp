@@ -77,8 +77,8 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 
   ros::NodeHandle nl(n);
 
-  // Set up all the subscribers.
-  for (const auto &topic : topics_) {
+  // Set up all the trajectory subscribers.
+  for (const auto &topic : topics_traj_) {
     // Generate a lambda function for this callback.
     boost::function<void(const fastrack_msgs::Trajectory::ConstPtr &,
                          const std::string &)>
@@ -89,6 +89,21 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 
     // Create a new subscriber with this callback.
     traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::Trajectory>(
+        topic.c_str(), 1, boost::bind(callback, _1, topic)));
+  }
+
+  // Set up all the occupancy grid subscribers.
+  for (const auto &topic : topics_occu_) {
+    // Generate a lambda function for this callback.
+    boost::function<void(const fastrack_msgs::OccupancyGridTime::ConstPtr &,
+                         const std::string &)>
+        callback = [this](const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                          const std::string &topic) {
+          OccupancyGridCallback(msg, topic);
+        }; // callback
+
+    // Create a new subscriber with this callback.
+    traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::OccupancyGridTime>(
         topic.c_str(), 1, boost::bind(callback, _1, topic)));
   }
 }
@@ -105,6 +120,25 @@ void STPeopleEnvironment::SensorCallback(
 void STPeopleEnvironment::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
   // TODO!
+}
+
+// Generic callback to handle a new occupancy grid msg on the given topic.
+void STPeopleEnvironment::OccupancyGridCallback(
+                        const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                        const std::string &topic) {
+  // Check if there's already an occupancy grid stored for this topic.
+  auto search = occupancy_grid_registry_.find(topic.c_str())
+  if (search == occupancy_grid_registry_.end()){
+    // Construct occupancy grid in place if doesn't exist yet.
+    // NOTE: emplace() is c++ 17 standard, may need to set flag "-std=c++17"
+    occupancy_grid_registry_.emplace(topic.c_str(), 
+                                    OccupancyGridTime::Create(msg));
+    ROS_INFO_STREAM("Creating occupancy grid entry for topic: " << topic.c_str()
+                    <<"."); // This should only happen once for each agent.
+  }else{
+    // Update existing OccupancyGridTime data structure from incoming message.
+    search->second->FromROSMsg(msg);
+  }
 }
 
 } //\namespace environment

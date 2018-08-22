@@ -92,23 +92,36 @@ private:
   bool RegisterCallbacks(const ros::NodeHandle &n);
 
   // Implement pure virtual sensor callback from base class to handle new
-  // occupancy grid time msgs.
+  // occupancy grid time msgs. (This may be replaced by OccupancyGridCallback.)
   void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr &msg);
 
-  // Generic callback to handle a new trajectory msg coming from robot on
-  // the given topic.
+  // Generic callback to handle a new trajectory msg on the given topic.
   void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr &msg,
                           const std::string &topic);
 
-  // Topics on which other robots' trajectories will be published.
-  std::vector<std::string> topics_;
+  // Generic callback to handle a new occupancy grid msg on the given topic.
+  void OccupancyGridCallback(
+                          const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                          const std::string &topic);
+
+  // Topics on which agent trajectories will be published.
+  std::vector<std::string> topics_traj_;
+
+  // Topics on which agent occupancy grids will be published
+  std::vector<std::string> topics_occu_;
 
   // Map from topic to trajectory, and from topic to TEB.
   std::unordered_map<std::string, Trajectory<Vector3d>> traj_registry_;
   std::unordered_map<std::string, Box> bound_registry_;
 
+  // Map from topic to space-time occupancy grids.
+  std::unordered_map<std::string, OccupancyGridTime> occupancy_grid_registry_;
+
   // One subscriber for each trajectory topic we're listening to.
   std::vector<ros::Subscriber> traj_subs_;
+
+  // One subscriber for each occupancy grid topic we're listening to.
+  std::vector<ros::Subscriber> occu_subs_;
 }; //\class STPeopleEnvironment
 
 } //\namespace environment
