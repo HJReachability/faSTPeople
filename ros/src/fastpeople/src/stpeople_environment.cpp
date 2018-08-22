@@ -52,7 +52,8 @@ namespace environment {
 // and only if the provided position is a valid collision-free configuration.
 // Provide a separate collision check for each type of tracking error bound.
 bool STPeopleEnvironment::IsValid(const Vector3d &position,
-                                  const Box &bound) const {
+                                  const Box &bound,
+                                  double time = std::numeric_limits<double>::quiet_NaN()) const {
     if (!initialized_) {
     ROS_WARN("%s: Tried to collision check an uninitialized BallsInBox.",
              name_.c_str());
@@ -68,15 +69,27 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
       position(2) > upper_(2) - bound.z)
     return false;
 
+  std::vector<Vector3d> centers(traj_registry_.size());
+  std::vector<Box> tebs(bound_registry_.size());
+  int i = 0;
+  for (it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
+    Box teb = bound_registry_[it->first];
+    Vector3d traj_pt = it->second.Interpolate(time);
+    centers[i] = traj_pt;
+    tebs[i] = teb;
+    ++i;
+  }
+
   // Check against each obstacle.
   // NOTE! Just using a linear search here for simplicity.
-  if (centers_.size() > 100)
-    ROS_WARN_THROTTLE(1.0, "%s: Caution! Linear search may be slowing you down.",
-                      name_.c_str());
+  //if (centers.size() > 100)
+  //  ROS_WARN_THROTTLE(1.0, "%s: Caution! Linear search may be slowing you down.",
+  //                    name_.c_str());
 
-  const Vector3d bound_vector(bound.x, bound.y, bound.z);
-  for (size_t ii = 0; ii < centers_.size(); ii++) {
-    const Vector3d& p = centers_[ii];
+  //const Vector3d bound_vector(bound.x, bound.y, bound.z);
+  for (size_t ii = 0; ii < centers.size(); ii++) {
+    const Vector3d& p = centers[ii];
+    const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
 
     // Find closest point in the tracking bound to the obstacle center.
     Vector3d closest_point;
@@ -87,7 +100,7 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
     }
 
     // Check distance to closest point.
-    if ((closest_point - p).norm() <= radii_[ii])
+    if ((closest_point - p).norm() <= 0.0001)
       return false;
   }
 
