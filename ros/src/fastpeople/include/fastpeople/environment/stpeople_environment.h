@@ -118,7 +118,7 @@ private:
   std::vector<ros::Subscriber> traj_subs_;
 
   // Map of occupancy grids received from sensor, time stamp to 2D array 
-  std::unordered_map<double, std_msgs::Float64[]> occupancy_grids;
+  std::unordered_map<double, std_msgs::Float64[]> occupancy_grids_;
 }; //\class STPeopleEnvironment
 
 } //\namespace environment

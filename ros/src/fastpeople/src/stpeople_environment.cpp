@@ -151,7 +151,7 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 void STPeopleEnvironment::SensorCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
 
-  occupancy_grids = MsgToOccuGrid(msg);
+  occupancy_grids_ = MsgToOccuGrid(msg);
 }
 
 // SensorCallback helper function that turns an OccupancyGridTime message into 
@@ -161,7 +161,7 @@ std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
 
   std::unordered_map<double, std_msgs::Float64[]> og;
   double tcount = 0;
-  for(std::size_t ii = 0; ii < (sizeof(msg->gridarray)/sizeof(msg->gridarray[0])); ++ii) {
+  for(std::size_t ii = 0; ii < msg->gridarray.size(); ++ii) {
     if(ii > 0) {
       tcount += (msg->gridarray[ii].header.stamp - msg->gridarray[ii - 1].header.stamp).toSec();
     }
