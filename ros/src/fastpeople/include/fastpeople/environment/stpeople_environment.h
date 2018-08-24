@@ -101,11 +101,6 @@ private:
   void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr &msg,
                           const std::string &topic);
 
-  // SensorCallback helper function that turns an OccupancyGridTime message into 
-  // a map from time stamps to occupancy grids (arrays)
-  std::unordered_map<double, float64[]> MsgToOccuGrid(
-    const crazyflie_human::OccupancyGridTime::ConstPtr &msg);
-
   // Topics on which other robots' trajectories will be published.
   std::vector<std::string> topics_;
 

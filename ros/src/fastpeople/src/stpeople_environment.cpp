@@ -45,7 +45,7 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 
-#include <cmath.h>
+#include <math.h>
 
 namespace fastrack {
 namespace environment {
@@ -57,7 +57,7 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
                                   const Box &bound,
                                   double time) const {
     if (!initialized_) {
-    ROS_WARN("%s: Tried to collision check an uninitialized BallsInBox.",
+    ROS_WARN("%s: Tried to collision check an uninitialized STPeopleEnvironment.",
              name_.c_str());
     return false;
     }
@@ -71,18 +71,25 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
       position(2) > upper_(2) - bound.z)
     return false;
 
+  // Find which points on other robots' trajectories to collision check with
+  // and their corresponding tracking error bounds.
   std::vector<Vector3d> traj_points(traj_registry_.size());
   std::vector<Box> tebs(bound_registry_.size());
-  int i = 0;
-  for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
+  size_t i = 0;
+  // TODO: Are bound topics in the same order as trajectory topics? 
+  for (auto it = bound_registry_.begin(); it != bound_registry_.end(); ++it) {
     Box teb = bound_registry_[it->first];
-    Vector3d traj_pt = it->second.Interpolate(time);
-    traj_points[i] = traj_pt;
     tebs[i] = teb;
     ++i;
   }
+  i = 0;
+  for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
+    Vector3d traj_pt = it->second.Interpolate(time);
+    traj_points[i] = traj_pt;
+    ++i;
+  }
 
-  //const Vector3d bound_vector(bound.x, bound.y, bound.z);
+  // Collision checking with other robots.
   for (size_t ii = 0; ii < traj_points.size(); ii++) {
     const Vector3d& p = traj_points[ii];
     const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
@@ -101,7 +108,8 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
       return false;
   }
 
-  double[] data1D = occupancy_grids_->gridarray[time].data; 
+  // Interpolation of occupancy grids.
+  double data1D[] = occupancy_grids_->gridarray[time].data; 
   // TODO: Get variable for delta t between occu grids
   if (time > occupancy_grids_->gridarray.size() - 1) { 
     double last_time = (sizeof(occupancy_grids_->gridarray)/sizeof(occupancy_grids_->gridarray[0])) - 1;
@@ -117,13 +125,15 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
     }
   } 
 
-  double width = occupancy_grids_->gridarray[time].width;
-  double height = occupancy_grids_->gridarray[time].height;
+  // Convert 1D occupancy grid to 2D.
+  size_t width = occupancy_grids_->gridarray[time].width;
+  size_t height = occupancy_grids_->gridarray[time].height;
   double[width][height] data2D;
   for (size_t ii = 0; ii < (sizeof(data1D)/sizeof(data1D)); ++ii) {
       data2D[ii % width][ii/width] = data1D[ii];
   }
 
+  // Collision checking with occupancy grid.
   double collision_prob = 0;
   // TODO: Vehicle size!
   double radius = sqrt(pow(bound.x, 2) + pow(bound.y + 2));
@@ -131,12 +141,11 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
     for (size_t jj = 0; jj < height; ++jj){
       distance = sqrt(pow((ii - position.X()), 2) + pow((jj - position.Y()), 2));
       if distance <= radius:
-        collision_prob == data2D[ii][jj];
+        collision_prob += data2D[ii][jj];
     }
   }
 
-  // TODO
-  double collision_threshold = 0.01;
+  double collision_threshold = 0.01; // TODO
   if collision_prob >= collision_threshold:
     return false;
 
@@ -188,24 +197,6 @@ void STPeopleEnvironment::SensorCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
 
   occupancy_grids_ = msg;
-}
-
-// SensorCallback helper function that turns an OccupancyGridTime message into 
-// a map from time stamps to occupancy grids (arrays)
-std::unordered_map<double, std_msgs::Float64[]> MsgToOccuGrid(
-    const crazyflie_human::OccupancyGridTime::ConstPtr &msg){
-
-  std::unordered_map<double, std_msgs::Float64[]> og;
-  double tcount = 0;
-  for(std::size_t ii = 0; ii < msg->gridarray.size(); ++ii) {
-    if(ii > 0) {
-      tcount += (msg->gridarray[ii].header.stamp - msg->gridarray[ii - 1].header.stamp).toSec();
-    }
-    og.insert({tcount, msg->gridarray[ii].data});
-  }
-
-  return og;
-
 }
 
 // Generic callback to handle a new trajectory msg coming from robot on
