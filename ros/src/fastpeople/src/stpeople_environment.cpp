@@ -45,6 +45,8 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 
+#include <cmath.h>
+
 namespace fastrack {
 namespace environment {
 
@@ -69,29 +71,23 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
       position(2) > upper_(2) - bound.z)
     return false;
 
-  std::vector<Vector3d> centers(traj_registry_.size());
+  std::vector<Vector3d> traj_points(traj_registry_.size());
   std::vector<Box> tebs(bound_registry_.size());
   int i = 0;
   for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
     Box teb = bound_registry_[it->first];
     Vector3d traj_pt = it->second.Interpolate(time);
-    centers[i] = traj_pt;
+    traj_points[i] = traj_pt;
     tebs[i] = teb;
     ++i;
   }
 
-  // Check against each obstacle.
-  // NOTE! Just using a linear search here for simplicity.
-  //if (centers.size() > 100)
-  //  ROS_WARN_THROTTLE(1.0, "%s: Caution! Linear search may be slowing you down.",
-  //                    name_.c_str());
-
   //const Vector3d bound_vector(bound.x, bound.y, bound.z);
-  for (size_t ii = 0; ii < centers.size(); ii++) {
-    const Vector3d& p = centers[ii];
+  for (size_t ii = 0; ii < traj_points.size(); ii++) {
+    const Vector3d& p = traj_points[ii];
     const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
 
-    // Find closest point in the tracking bound to the obstacle center.
+    // Find closest point in the tracking bound to the trajectory point.
     Vector3d closest_point;
     for (size_t jj = 0; jj < 3; jj++) {
       closest_point(jj) =
@@ -104,6 +100,46 @@ bool STPeopleEnvironment::IsValid(const Vector3d &position,
     if ((closest_point - p).norm() <= 0.0001)
       return false;
   }
+
+  double[] data1D = occupancy_grids_->gridarray[time].data; 
+  // TODO: Get variable for delta t between occu grids
+  if (time > occupancy_grids_->gridarray.size() - 1) { 
+    double last_time = (sizeof(occupancy_grids_->gridarray)/sizeof(occupancy_grids_->gridarray[0])) - 1;
+    data1D = occupancy_grids_->gridarray[last_time].data;
+  } 
+  if (int(time) != time) {
+    double[] prev_data = occupancy_grids_->gridarray[int(time)].data;
+    double[] next_data = occupancy_grids_->gridarray[int(time) + 1].data;
+    for (size_t ii = 0; ii < (sizeof(prev_data)/sizeof(prev_data)); ++ii) {
+      double prev = prev_data[ii];
+      double next = next_data[ii];
+      data1D[ii] = prev + (next - prev) * ((time - int(time)) / (int(time) + 1 - int(time)));
+    }
+  } 
+
+  double width = occupancy_grids_->gridarray[time].width;
+  double height = occupancy_grids_->gridarray[time].height;
+  double[width][height] data2D;
+  for (size_t ii = 0; ii < (sizeof(data1D)/sizeof(data1D)); ++ii) {
+      data2D[ii % width][ii/width] = data1D[ii];
+  }
+
+  double collision_prob = 0;
+  // TODO: Vehicle size!
+  double radius = sqrt(pow(bound.x, 2) + pow(bound.y + 2));
+  for (size_t ii = 0; ii < width; ++ii){
+    for (size_t jj = 0; jj < height; ++jj){
+      distance = sqrt(pow((ii - position.X()), 2) + pow((jj - position.Y()), 2));
+      if distance <= radius:
+        collision_prob == data2D[ii][jj];
+    }
+  }
+
+  // TODO
+  double collision_threshold = 0.01;
+  if collision_prob >= collision_threshold:
+    return false;
+
 
   return true;
 }
@@ -151,7 +187,7 @@ bool STPeopleEnvironment::RegisterCallbacks(const ros::NodeHandle &n) {
 void STPeopleEnvironment::SensorCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
 
-  occupancy_grids_ = MsgToOccuGrid(msg);
+  occupancy_grids_ = msg;
 }
 
 // SensorCallback helper function that turns an OccupancyGridTime message into 

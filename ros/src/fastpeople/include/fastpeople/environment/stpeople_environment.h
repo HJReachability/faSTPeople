@@ -58,7 +58,6 @@
 #include <vector>
 #include <unordered_map>
 
-#include <std_msgs/Float64.h>
 
 namespace fastrack {
 namespace environment {
@@ -117,8 +116,8 @@ private:
   // One subscriber for each trajectory topic we're listening to.
   std::vector<ros::Subscriber> traj_subs_;
 
-  // Map of occupancy grids received from sensor, time stamp to 2D array 
-  std::unordered_map<double, std_msgs::Float64[]> occupancy_grids_;
+  // Store OccupancyGridTime messages.   
+  crazyflie_human::OccupancyGridTime::ConstPtr &occupancy_grids_;
 }; //\class STPeopleEnvironment
 
 } //\namespace environment
