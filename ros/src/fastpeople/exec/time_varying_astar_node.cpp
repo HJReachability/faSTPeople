@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   fe::STPeopleEnvironment sp;
   fp::TimeVaryingAStar<
     fs::PositionVelocity, fe::STPeopleEnvironment, fb::Box,
-    fastrack_srvs::TrackingBoundBox> planner {sp, 1, 0.01};
+    fastrack_srvs::TrackingBoundBox> planner;
 
   if (!planner.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize planner.",

@@ -158,7 +158,7 @@ private:
         //   boost::hash_combine(seed, boost::hash_value(node->priority_));
         boost::hash_combine(seed, boost::hash_value(node->time_));
         for (int d = 0; d < node->point_.Configuration().size(); d += 1) {
-          boost::hash_combine(seed, boost::hash_value(node->point_(d)));
+          boost::hash_combine(seed, boost::hash_value(node->point_.ToVector()(d)));
         }
         //        boost::hash_combine(seed, boost::hash_value(node->parent_));
         return seed;
@@ -204,12 +204,12 @@ private:
   std::vector<S> Neighbors(const S& point) const;
 
   // Returns the total cost to get to point.
-  static double ComputeCostToCome(const typename Node::ConstPtr& parent, 
+  double ComputeCostToCome(const typename Node::ConstPtr& parent, 
     const S& point, 
     double dt=-std::numeric_limits<double>::infinity()) const;
 
   // Returns the heuristic for the point.
-  static double ComputeHeuristic(const S& point, 
+  double ComputeHeuristic(const S& point, 
     const S& stop) const;
 
 /*
@@ -225,7 +225,7 @@ private:
 
   // Maximum distance between test points on line segments being
   // collision checked.
-  const double collision_check_resolution_;
+  double collision_check_resolution_;
 
   // Stores max speed that quad can go (in all directions)
 
@@ -275,8 +275,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
   // insert neighbors that are not already in the closed list.
   while (true) {
     if (open.size() != open_registry.size()){
-      std::runtime_error("open and open_registry are not the same size!\n open: %zu, open_registry: %zu", 
-      open.size(), open_registry.size());
+      throw std::runtime_error("open and open_registry are not the same size!");
     }
 
     //if ((ros::Time::now() - plan_start_time).toSec() > budget)
@@ -284,7 +283,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
 
     if (open.empty()){
       ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", KinematicPlanner<S, E, B, SB>::name_.c_str());
-      return nullptr;
+      return Trajectory<S>();
     }
 
     const typename Node::Ptr next = *open.begin();
@@ -332,7 +331,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
 
       // Gotta sanity check if we got a valid neighbor time.
       if (std::isinf(best_neigh_time)) 
-        std::runtime_error("neighbor time infinity");
+        throw std::runtime_error("neighbor time infinity");
 
       const double neighbor_time = next->time_ + best_neigh_time;      
 
@@ -420,7 +419,7 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::Con
 // Returns the heuristic for the point.
 template <typename S, typename E, typename B, typename SB>
 double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point, 
-  const S& stop) const {
+  const S& stop) const{
 
   // This heuristic is the best possible distance + best possible time. 
   // option 1: ComputeBestTime(point, stop)
@@ -479,7 +478,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
                                     double& max_collision_prob) const {
 
   // Need to check if collision checking against yourself
-  const bool same_pt = start.isApprox(stop, 1e-8);
+  const bool same_pt = start.Configuration().isApprox(stop, 1e-8);
 
   // Compute the unit vector pointing from start to stop.
   const S direction = (same_pt) ? S::Zero() : 
@@ -560,15 +559,15 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
   // std::reverse(collision_probs.begin(), collision_probs.end());
 
   // Lift positions into states.
-  const std::vector<S> states =
-    KinematicPlanner<S, E, B, SB>::dynamics_.LiftGeometricTrajectory(positions, times);
+  //const std::vector<S> states =
+  //  KinematicPlanner<S, E, B, SB>::dynamics_.LiftGeometricTrajectory(positions, times);
 
   // Create dummy list containing value function IDs.
   //const std::vector<ValueFunctionId> values(states.size(), incoming_value_); 
   //ROS_INFO("Returning Trajectory of length %zu.", positions.size());
   
   // Create a trajectory.
-  return Trajectory<S>::Trajectory(states, times);
+  return Trajectory<S>(positions, times);
 }
 
 

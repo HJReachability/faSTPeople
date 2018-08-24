@@ -52,7 +52,8 @@ namespace environment {
 // and only if the provided position is a valid collision-free configuration.
 // Provide a separate collision check for each type of tracking error bound.
 bool STPeopleEnvironment::IsValid(const Vector3d &position,
-                                  const Box &bound) const {
+                                  const Box &bound,
+                                  double time) const {
   // TODO!
   return false;
 }
