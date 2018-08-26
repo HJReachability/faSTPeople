@@ -147,7 +147,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
 
   // Find which points on other robots' trajectories to collision check with
   // and their corresponding tracking error bounds.
-  std::vector<Vector3d> traj_points(traj_registry_.size());
+  std::vector<S> traj_points(traj_registry_.size());
   std::vector<Box> tebs(bound_registry_.size());
   size_t i = 0;
   // TODO: Are bound topics in the same order as trajectory topics? 
@@ -159,14 +159,14 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
 
   i = 0;
   for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
-    Vector3d traj_pt = it->second.Interpolate(time);
+    S traj_pt = it->second.Interpolate(time);
     traj_points[i] = traj_pt;
     ++i;
   }
 
   // Collision checking with other robots.
   for (size_t ii = 0; ii < traj_points.size(); ii++) {
-    const Vector3d& p = traj_points[ii];
+    const S& p = traj_points[ii];
     const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
 
     // Find closest point in the tracking bound to the trajectory point.
@@ -174,12 +174,12 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
     for (size_t jj = 0; jj < 3; jj++) {
       closest_point(jj) =
         std::min(position(jj) + bound_vector(jj),
-                 std::max(position(jj) - bound_vector(jj), p(jj)));
+                 std::max(position(jj) - bound_vector(jj), p.Configuration()(jj)));
     }
 
     // Check distance to closest point.
     // TODO: Vehicle size!
-    if ((closest_point - p).norm() <= 0.0001)
+    if ((closest_point - p.Configuration()).norm() <= 0.0001)
       return false;
   }
 
@@ -292,10 +292,10 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
   auto iter = traj_registry_.find(topic);
   if (iter == traj_registry_.end()) {
    // This is a topic we haven't seen before.
-    traj_registry_.emplace(topic, Trajectory<Vector3d>(msg));
+    traj_registry_.emplace(topic, Trajectory<S>(msg));
   } else {
    // We've already seen this topic, so just update the recorded trajectory.
-    iter->second = Trajectory<Vector3d>(msg);
+    iter->second = Trajectory<S>(msg);
 }
 
 
