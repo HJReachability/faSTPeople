@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle n("~");
 
   fastrack::planning::TimeVaryingAStar<
-    fs::PositionVelocity, fe::STPeopleEnvironment, fb::Box,
+    fs::PositionVelocity, fe::STPeopleEnvironment<fs::PositionVelocity>, fb::Box,
     fastrack_srvs::TrackingBoundBox> planner;
 
   if (!planner.Initialize(n)) {

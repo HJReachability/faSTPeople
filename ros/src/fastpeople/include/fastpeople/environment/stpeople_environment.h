@@ -47,12 +47,16 @@
 #include <fastrack/trajectory/trajectory.h>
 #include <fastrack/utils/types.h>
 
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+
 #include <crazyflie_human/OccupancyGridTime.h>
 
 #include <fastrack_msgs/Trajectory.h>
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
+#include <math.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <vector>
@@ -65,6 +69,7 @@ namespace environment {
 using bound::Box;
 using trajectory::Trajectory;
 
+template <typename S>
 class STPeopleEnvironment
     : public Environment<crazyflie_human::OccupancyGridTime, Empty> {
 public:
@@ -105,15 +110,197 @@ private:
   std::vector<std::string> topics_;
 
   // Map from topic to trajectory, and from topic to TEB.
-  std::unordered_map<std::string, Trajectory<Vector3d>> traj_registry_;
+  std::unordered_map<std::string, Trajectory<S>> traj_registry_;
   std::unordered_map<std::string, Box> bound_registry_;
 
   // One subscriber for each trajectory topic we're listening to.
   std::vector<ros::Subscriber> traj_subs_;
 
   // Store OccupancyGridTime messages.   
-  crazyflie_human::OccupancyGridTime::ConstPtr &occupancy_grids_;
+  crazyflie_human::OccupancyGridTime::ConstPtr occupancy_grids_;
 }; //\class STPeopleEnvironment
+
+
+// -------------------------------- IMPLEMENTATION ------------------------------------- //
+
+// Derived classes must provide a collision checker which returns true if
+// and only if the provided position is a valid collision-free configuration.
+// Provide a separate collision check for each type of tracking error bound.
+template <typename S>
+bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
+                                  const Box &bound,
+                                  double time) const {
+    if (!initialized_) {
+    ROS_WARN("%s: Tried to collision check an uninitialized STPeopleEnvironment.",
+             name_.c_str());
+    return false;
+    }
+
+  // check against the boundary of the occupancy grid
+  if (position(0) < lower_(0) + bound.x ||
+      position(0) > upper_(0) - bound.x ||
+      position(1) < lower_(1) + bound.y ||
+      position(1) > upper_(1) - bound.y ||
+      position(2) < lower_(2) + bound.z ||
+      position(2) > upper_(2) - bound.z)
+    return false;
+
+  // Find which points on other robots' trajectories to collision check with
+  // and their corresponding tracking error bounds.
+  std::vector<Vector3d> traj_points(traj_registry_.size());
+  std::vector<Box> tebs(bound_registry_.size());
+  size_t i = 0;
+  // TODO: Are bound topics in the same order as trajectory topics? 
+  for (auto it = bound_registry_.begin(); it != bound_registry_.end(); ++it) {
+    Box teb = it->second;
+    tebs[i] = teb;
+    ++i;
+  }
+
+  i = 0;
+  for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
+    Vector3d traj_pt = it->second.Interpolate(time);
+    traj_points[i] = traj_pt;
+    ++i;
+  }
+
+  // Collision checking with other robots.
+  for (size_t ii = 0; ii < traj_points.size(); ii++) {
+    const Vector3d& p = traj_points[ii];
+    const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
+
+    // Find closest point in the tracking bound to the trajectory point.
+    Vector3d closest_point;
+    for (size_t jj = 0; jj < 3; jj++) {
+      closest_point(jj) =
+        std::min(position(jj) + bound_vector(jj),
+                 std::max(position(jj) - bound_vector(jj), p(jj)));
+    }
+
+    // Check distance to closest point.
+    // TODO: Vehicle size!
+    if ((closest_point - p).norm() <= 0.0001)
+      return false;
+  }
+
+  // Interpolation of occupancy grids.
+  std::vector<double> data1D = {occupancy_grids_->gridarray[time].data}; 
+  // TODO: Get variable for delta t between occu grids
+  if (time > occupancy_grids_->gridarray.size() - 1) { 
+    double last_time = (sizeof(occupancy_grids_->gridarray)/sizeof(occupancy_grids_->gridarray[0])) - 1;
+    data1D = occupancy_grids_->gridarray[last_time].data;
+  } 
+  if (int(time) != time) {
+    std::vector<double> prev_data = occupancy_grids_->gridarray[int(time)].data;
+    std::vector<double> next_data = occupancy_grids_->gridarray[int(time) + 1].data;
+    for (size_t ii = 0; ii < (sizeof(prev_data)/sizeof(prev_data)); ++ii) {
+      double prev = prev_data[ii];
+      double next = next_data[ii];
+      data1D[ii] = prev + (next - prev) * ((time - int(time)) / (int(time) + 1 - int(time)));
+    }
+  } 
+
+  // Convert 1D occupancy grid to 2D.
+  size_t width = occupancy_grids_->gridarray[time].width;
+  size_t height = occupancy_grids_->gridarray[time].height;
+  double data2D[width][height];
+  for (size_t ii = 0; ii < (sizeof(data1D)/sizeof(data1D)); ++ii) {
+      data2D[ii % width][ii/width] = data1D[ii];
+  }
+
+  // Collision checking with occupancy grid.
+  double collision_prob = 0;
+  // TODO: Vehicle size!
+  double radius = sqrt(pow(bound.x, 2) + pow(bound.y, 2));
+  for (size_t ii = 0; ii < width; ++ii){
+    for (size_t jj = 0; jj < height; ++jj){
+      double distance = sqrt(pow((ii - position(0)), 2) + pow((jj - position(1)), 2));
+      if (distance <= radius)
+        collision_prob += data2D[ii][jj];
+    }
+  }
+
+  double collision_threshold = 0.01; // TODO
+  if (collision_prob >= collision_threshold)
+    return false;
+
+
+  return true;
+}
+
+// Derived classes must have some sort of visualization through RViz.
+template <typename S>
+void STPeopleEnvironment<S>::Visualize() const {
+  // TODO!
+}
+
+// Load parameters. This should still call Environment::LoadParameters.
+template <typename S>
+bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
+  ros::NodeHandle nl(n);
+  if (!nl.getParam("topic/other_trajs", topics_)) return false;
+  return Environment::LoadParameters(n);
+}
+
+// Register callbacks. This should still call Environment::RegisterCallbacks.
+template <typename S>
+bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
+  if (!Environment<crazyflie_human::OccupancyGridTime,
+                   Empty>::RegisterCallbacks(n)) {
+    ROS_ERROR("%s: Environment register callbacks failed.", name_.c_str());
+    return false;
+  }
+
+  ros::NodeHandle nl(n);
+
+  // Set up all the subscribers.
+  for (const auto &topic : topics_) {
+    // Generate a lambda function for this callback.
+    boost::function<void(const fastrack_msgs::Trajectory::ConstPtr &,
+                         const std::string &)>
+        callback = [this](const fastrack_msgs::Trajectory::ConstPtr &msg,
+                          const std::string &topic) {
+          TrajectoryCallback(msg, topic);
+        }; // callback
+
+    // Create a new subscriber with this callback.
+    traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::Trajectory>(
+        topic.c_str(), 1, boost::bind(callback, _1, topic)));
+  }
+}
+
+// Implement pure virtual sensor callback from base class to handle new
+// occupancy grid time msgs.
+template <typename S>
+void STPeopleEnvironment<S>::SensorCallback(
+    const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
+
+  occupancy_grids_ = msg;
+}
+
+// Generic callback to handle a new trajectory msg coming from robot on
+// the given topic.
+template <typename S>
+void STPeopleEnvironment<S>::TrajectoryCallback(
+    const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
+/*
+  if(traj_registry_.contains(topic)) {
+    traj_registry_.erase(topic);
+  }
+  traj_registry_.insert({topic, Trajectory(msg)});
+*/
+  auto iter = traj_registry_.find(topic);
+  if (iter == traj_registry_.end()) {
+   // This is a topic we haven't seen before.
+    traj_registry_.emplace(topic, Trajectory<Vector3d>(msg));
+  } else {
+   // We've already seen this topic, so just update the recorded trajectory.
+    iter->second = Trajectory<Vector3d>(msg);
+}
+
+
+}
+
 
 } //\namespace environment
 } //\namespace fastrack
