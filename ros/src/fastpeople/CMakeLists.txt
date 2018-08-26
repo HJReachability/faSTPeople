@@ -73,30 +73,30 @@ link_directories(
   ${BOOST_LIBRARY_DIRS}
 )
 
-file(GLOB_RECURSE ${PROJECT_NAME}_srcs ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/src/*.cpp)
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_srcs})
-add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+#file(GLOB_RECURSE ${PROJECT_NAME}_srcs ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/src/*.cpp)
+#add_library(${PROJECT_NAME} ${${PROJECT_NAME}_srcs})
+#add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-target_link_libraries(${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
-  ${OMPL_LIBRARIES}
-  ${MATIO_LIBRARIES}
-  ${FLANN_LIBRARIES}
-  ${BOOST_LIBRARIES}
-)
+#target_link_libraries(${PROJECT_NAME}
+#  ${catkin_LIBRARIES}
+#  ${EIGEN3_LIBRARIES}
+#  ${OMPL_LIBRARIES}
+#  ${MATIO_LIBRARIES}
+#  ${FLANN_LIBRARIES}
+#  ${BOOST_LIBRARIES}
+#)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-target_link_libraries(${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
-  ${OMPL_LIBRARIES}
-  ${MATIO_LIBRARIES}
-  ${FLANN_LIBRARIES}
-  ${BOOST_LIBRARIES}
-)
+#target_link_libraries(${PROJECT_NAME}
+#  ${catkin_LIBRARIES}
+#  ${EIGEN3_LIBRARIES}
+#  ${OMPL_LIBRARIES}
+#  ${MATIO_LIBRARIES}
+#  ${FLANN_LIBRARIES}
+#  ${BOOST_LIBRARIES}
+#)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 file(GLOB_RECURSE ${PROJECT_NAME}_execs exec/*.cpp)
