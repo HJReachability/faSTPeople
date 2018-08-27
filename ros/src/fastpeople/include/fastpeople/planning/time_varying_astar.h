@@ -50,6 +50,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <boost/functional/hash.hpp>
 
 namespace fastrack {
 namespace planning {
@@ -156,7 +157,7 @@ private:
 
         // Hash this node's contents together.
         //   boost::hash_combine(seed, boost::hash_value(node->priority_));
-        boost::hash_combine(seed, node->time_);
+        boost::hash_combine(seed, boost::hash_value(node->time_));
         for (int d = 0; d < node->point_.Configuration().size(); d += 1) {
           boost::hash_combine(seed, boost::hash_value(node->point_.ToVector()(d)));
         }
