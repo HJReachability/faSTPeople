@@ -118,6 +118,12 @@ private:
 
   // Store OccupancyGridTime messages.   
   crazyflie_human::OccupancyGridTime::ConstPtr occupancy_grids_;
+
+  // Radius of the sphere representing the quadrotor using this environment.
+  double vehicle_size_;
+
+  // Threshold for probability of collision.
+  double collision_threshold_;
 }; //\class STPeopleEnvironment
 
 
@@ -178,31 +184,40 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
     }
 
     // Check distance to closest point.
-    // TODO: Vehicle size!
-    if ((closest_point - p.Configuration()).norm() <= 0.0001)
+    if ((closest_point - p.Configuration()).norm() <= vehicle_size_)
       return false;
   }
 
   // Interpolation of occupancy grids.
-  std::vector<double> data1D = {occupancy_grids_->gridarray[time].data}; 
-  // TODO: Get variable for delta t between occu grids
-  if (time > occupancy_grids_->gridarray.size() - 1) { 
-    double last_time = (sizeof(occupancy_grids_->gridarray)/sizeof(occupancy_grids_->gridarray[0])) - 1;
-    data1D = occupancy_grids_->gridarray[last_time].data;
-  } 
-  if (int(time) != time) {
-    std::vector<double> prev_data = occupancy_grids_->gridarray[int(time)].data;
-    std::vector<double> next_data = occupancy_grids_->gridarray[int(time) + 1].data;
-    for (size_t ii = 0; ii < (sizeof(prev_data)/sizeof(prev_data)); ++ii) {
-      double prev = prev_data[ii];
-      double next = next_data[ii];
-      data1D[ii] = prev + (next - prev) * ((time - int(time)) / (int(time) + 1 - int(time)));
+  std::vector<double> data1D;  
+  std::vector<crazyflie_human::ProbabilityGrid> gridarr = occupancy_grids_->gridarray;
+  double last_time_stamp = gridarr[gridarr.size() - 1].header.stamp.toSec();
+  if (time >= last_time_stamp) { 
+    data1D = gridarr[gridarr.size() - 1].data;
+  } else {
+    for (size_t ii = 0; ii < gridarr.size() - 1; ++ii) {
+      double current_time_stamp = gridarr[ii].header.stamp.toSec();
+      if (time == current_time_stamp) {
+        data1D = gridarr[ii].data;
+        break;
+      } 
+      double next_time_stamp = gridarr[ii + 1].header.stamp.toSec();
+      if ((current_time_stamp < time) && (next_time_stamp > time)) {
+        std::vector<double> prev_data = gridarr[ii].data;
+        std::vector<double> next_data = gridarr[ii + 1].data;
+        for (size_t jj = 0; jj < prev_data.size(); ++jj) {
+          double prev = prev_data[jj];
+          double next = next_data[jj];
+          data1D[jj] = prev + (next - prev) * ((time - current_time_stamp) / (next_time_stamp - current_time_stamp));
+        }
+        break;
+      }
     }
-  } 
+  }
 
   // Convert 1D occupancy grid to 2D.
-  size_t width = occupancy_grids_->gridarray[time].width;
-  size_t height = occupancy_grids_->gridarray[time].height;
+  size_t width = gridarr[time].width;
+  size_t height = gridarr[time].height;
   double data2D[width][height];
   for (size_t ii = 0; ii < (sizeof(data1D)/sizeof(data1D)); ++ii) {
       data2D[ii % width][ii/width] = data1D[ii];
@@ -210,8 +225,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
 
   // Collision checking with occupancy grid.
   double collision_prob = 0;
-  // TODO: Vehicle size!
-  double radius = sqrt(pow(bound.x, 2) + pow(bound.y, 2));
+  double radius = sqrt(pow(bound.x, 2) + pow(bound.y, 2)) + vehicle_size_;
   for (size_t ii = 0; ii < width; ++ii){
     for (size_t jj = 0; jj < height; ++jj){
       double distance = sqrt(pow((ii - position(0)), 2) + pow((jj - position(1)), 2));
@@ -220,8 +234,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
     }
   }
 
-  double collision_threshold = 0.01; // TODO
-  if (collision_prob >= collision_threshold)
+  if (collision_prob >= collision_threshold_)
     return false;
 
 
@@ -239,6 +252,8 @@ template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
   ros::NodeHandle nl(n);
   if (!nl.getParam("topic/other_trajs", topics_)) return false;
+  if (!nl.getParam("vehicle_size", vehicle_size_)) return false;
+  if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
   return Environment::LoadParameters(n);
 }
 
