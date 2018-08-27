@@ -156,7 +156,7 @@ private:
 
         // Hash this node's contents together.
         //   boost::hash_combine(seed, boost::hash_value(node->priority_));
-        boost::hash_combine(seed, boost::hash_value(node->time_));
+        boost::hash_combine(seed, node->time_);
         for (int d = 0; d < node->point_.Configuration().size(); d += 1) {
           boost::hash_combine(seed, boost::hash_value(node->point_.ToVector()(d)));
         }
@@ -481,7 +481,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
   const bool same_pt = start.Configuration().isApprox(stop.Configuration(), 1e-8);
 
   // Compute the unit vector pointing from start to stop.
-  const S direction = (same_pt) ? S::S() : 
+  const S direction = (same_pt) ? S() : 
     static_cast<S>((stop - start) / (stop - start).Configuration().norm());
 
   // Compute the dt between query points.
@@ -495,7 +495,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
   S query(start);
   for (double time = start_time; time < stop_time; time += dt) {
     const bool valid_pt = 
-      KinematicPlanner<S, E, B, SB>::space_->IsValid(query, KinematicPlanner<S, E, B, SB>::bound_); //*****************************************
+      KinematicPlanner<S, E, B, SB>::env_.IsValid(query.ToVector(), KinematicPlanner<S, E, B, SB>::bound_, time); 
       //space_->IsValid(query, incoming_value_, outgoing_value_, collision_prob, time);
 
     if (collision_prob > max_collision_prob)
