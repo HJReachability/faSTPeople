@@ -478,10 +478,10 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start, const S& stop
                                     double& max_collision_prob) const {
 
   // Need to check if collision checking against yourself
-  const bool same_pt = start.Configuration().isApprox(stop, 1e-8);
+  const bool same_pt = start.Configuration().isApprox(stop.Configuration(), 1e-8);
 
   // Compute the unit vector pointing from start to stop.
-  const S direction = (same_pt) ? S::Zero() : 
+  const S direction = (same_pt) ? S::S() : 
     static_cast<S>((stop - start) / (stop - start).Configuration().norm());
 
   // Compute the dt between query points.
