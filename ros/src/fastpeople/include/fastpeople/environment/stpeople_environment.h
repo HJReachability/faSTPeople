@@ -111,14 +111,19 @@ private:
                           const std::string &topic);
 
   // Topics on which agent trajectories will be published.
-  std::vector<std::string> topics_traj_;
+  std::vector<std::string> traj_topics_;
 
   // Topics on which agent occupancy grids will be published
   std::vector<std::string> occupancy_grid_topics_;
 
-  // Map from topic to trajectory, from srv to TEB, and topic to occupancy grid.
-  std::unordered_map<std::string, Trajectory<S>> traj_registry_;
-  std::unordered_map<std::string, Box> bound_registry_;
+  // Map from robot priority to trajectory. Each robot only stores the 
+  // trajectories of robots with higher priority number than themselves
+  std::unordered_map<size_t, Trajectory<S>> traj_registry_;
+
+  // List of tracking error bounds (TEB) corresponding to trajectories.
+  std::vector<Box> bound_registry_;
+
+  // Map from topic to occupancy grid.
   std::unordered_map<std::string, OccupancyGridTimeInterpolator>
       occupancy_grid_registry_;
 
@@ -258,11 +263,33 @@ void STPeopleEnvironment<S>::Visualize() const {
 template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
   ros::NodeHandle nl(n);
+  name_ = ros::names::append(n.getNamespace(), "STPeopleEnvironment");
+
+  // Service for loading bound.
+  std::vector<std::string> other_bound_srvs_name;
+
   if (!nl.getParam("topic/other_trajs", traj_topics_)) return false;
   if (!nl.getParam("topic/other_occupancy_grids", occupancy_grid_topics_))
     return false;
   if (!nl.getParam("vehicle_size", vehicle_size_)) return false;
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
+  if (!nl.getParam("other_bound_srvs", other_bound_srvs_name)) return false;
+
+  // Load all the TEBs for the higher-priority robots. 
+  for(size_t ii=0; ii < other_bound_srvs_name.size(); ii++){
+    std::string srv_name = other_bound_srvs_name_[ii];
+    ros::service::waitForService(srv_name);
+    ros::ServiceClient bound_srv = nl.serviceClient<SB>(srv_name.c_str(), true);
+
+    SB b;
+    if (!bound_srv.call(b)) {
+      ROS_ERROR("%s: Bound server error.", name_.c_str());
+      return false;
+    }
+
+    bound_registry_[ii].FromRos(b.response);
+  }
+
   return Environment::LoadParameters(n);
 }
 
