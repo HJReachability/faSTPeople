@@ -27,7 +27,8 @@
     <arg name="prob_thresh" value="$(arg prob_thresh)" />
     <arg name="collision_check_resolution" value="$(arg collision_check_resolution)" />
     <arg name="grid_resolution" value="$(arg grid_resolution)" />
-    <arg name="other_traj_topics" value="[/traj$(arg robot2)]" />
+    <arg name="other_traj_topics" value="[]" />
+    <arg name="other_bound_srvs" value="[]" />
   </include>
 
   <!-- ========================== Robot 2. ========================== -->
@@ -37,5 +38,6 @@
     <arg name="collision_check_resolution" value="$(arg collision_check_resolution)" />
     <arg name="grid_resolution" value="$(arg grid_resolution)" />
     <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
+    <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
   </include>
 </launch>
