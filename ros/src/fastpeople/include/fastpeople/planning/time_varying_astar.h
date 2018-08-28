@@ -48,9 +48,9 @@
 #include <fastpeople/environment/stpeople_environment.h>
 #include <fastrack/planning/kinematic_planner.h>
 
+#include <boost/functional/hash.hpp>
 #include <set>
 #include <unordered_set>
-#include <boost/functional/hash.hpp>
 
 namespace fastrack {
 namespace planning {
@@ -140,7 +140,7 @@ private:
         boost::hash_combine(seed, boost::hash_value(node->time_));
         for (size_t ii = 0; ii < node->point_.ConfigurationDimension(); ii++) {
           boost::hash_combine(seed, 
-            boost::hash_value(node->point_.ToVector()(ii)));
+            boost::hash_value(node->point_.Configuration()(ii)));
         }
 
         return seed;
@@ -168,6 +168,10 @@ private:
                       double start_time, double stop_time, 
                       double& collision_prob) const;
 
+
+  if (!collision_prob) 
+   throw std::runtime_error("Collision probability pointer was null.");
+
   // This function removes all instances of next with matching
   // point and time values from the given multiset (there should only be 1). 
   static void RemoveFromMultiset(const typename Node::Ptr next, 
@@ -184,10 +188,11 @@ private:
   // NOTE! Include the given point.
   std::vector<S> Neighbors(const S& point) const;
 
-  // Returns the total cost to get to point.
+  // Returns the total cost to get to point. best_time is the fastest time 
+  // it takes to go from the parent to the point.
   double ComputeCostToCome(const typename Node::ConstPtr& parent, 
     const S& point, 
-    double dt=-std::numeric_limits<double>::infinity()) const;
+    double best_time=-std::numeric_limits<double>::infinity()) const;
 
   // Returns the heuristic for the point.
   double ComputeHeuristic(const S& point, 
@@ -264,9 +269,9 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
     RemoveFromMultiset(next, open); 
 
     // Check if this guy is the goal.
-    double dist = (next->point_ - end).Configuration().norm();
+    const double dist = (next->point_ - end).Configuration().norm();
 
-    if (dist < grid_resolution_*0.5) {
+    if (dist < grid_resolution_ * 0.5) {
       const typename Node::ConstPtr parent_node = (next->parent_ == nullptr) ? 
       next : next->parent_;
 
@@ -349,26 +354,28 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S &start, const S &end,
   }
 }
 
-// Returns the total cost to get to point.
+// Returns the total cost to get to point. best_time is the fastest time 
+// it takes to go from the parent to the point.
 template <typename S, typename E, typename B, typename SB>
 double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(const typename Node::ConstPtr& parent, 
-  const S& point, double dt) const{
+  const S& point, double best_time) const{
 
   if(parent == nullptr){
     ROS_FATAL("Parent should never be null when computing cost to come!");
     return std::numeric_limits<double>::infinity();
   }
 
-  if (dt < 0.0)
-    dt = KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(parent->point_, point); 
+  // If best_time is not valid or provided by the call, compute it now. 
+  if (best_time < 0.0)
+    best_time = KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(parent->point_, point); 
 
   // Cost to get to the parent contains distance + time. Add to this
   // the distance from the parent to the current point and the time
 
-  // option 1: parent->cost_to_come_ + dt
-  // option 2 (doesn't work!): parent->cost_to_come_ + dt + 0.001*(parent->point_ - point).norm();
+  // option 1: parent->cost_to_come_ + best_time
+  // option 2 (doesn't work!): parent->cost_to_come_ + best_time + 0.001*(parent->point_ - point).norm();
   // option 3: parent->cost_to_come_ + (parent->point_ - point).norm();
-  return parent->cost_to_come_ + dt + (parent->point_ - point).Configuration().norm();
+  return parent->cost_to_come_ + best_time + (parent->point_ - point).Configuration().norm();
 }
 
 // Returns the heuristic for the point.
@@ -419,6 +426,9 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
   const S& stop, double start_time, double stop_time, 
   double& max_collision_prob) const {
 
+  if (!max_collision_prob) 
+   throw std::runtime_error("Max collision probability pointer was null.");
+
   // Need to check if collision checking against yourself
   const bool same_pt = start.Configuration().isApprox(stop.Configuration(), 1e-8);
 
@@ -437,7 +447,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
   S query(start);
   for (double time = start_time; time < stop_time; time += dt) {
     const bool valid_pt = 
-      KinematicPlanner<S, E, B, SB>::env_.IsValid(query.ToVector(), KinematicPlanner<S, E, B, SB>::bound_, time); 
+      KinematicPlanner<S, E, B, SB>::env_.IsValid(query.Position(), KinematicPlanner<S, E, B, SB>::bound_, time); 
       //space_->IsValid(query, incoming_value_, outgoing_value_, collision_prob, time);
 
     if (collision_prob > max_collision_prob)
@@ -447,7 +457,7 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
       return false;
 
     // Take a step.
-    query += collision_check_resolution_*direction;
+    query += collision_check_resolution_ * direction;
   }
 
   return true;
