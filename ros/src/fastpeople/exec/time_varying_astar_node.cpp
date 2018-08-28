@@ -45,6 +45,7 @@
 #include <fastpeople/environment/stpeople_environment.h>
 #include <fastrack/bound/box.h>
 
+#include <fastrack_srvs/TrackingBoundBox.h>
 #include <fastrack_srvs/KinematicPlannerDynamics.h>
 
 #include <ros/ros.h>
@@ -59,8 +60,10 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "PlannerDemo");
   ros::NodeHandle n("~");
 
-  fp::TimeVaryingAStar<fs::PositionVelocity, fe::STPeopleEnvironment, fb::Box,
-    fastrack_srvs::TrackingBoundBox> planner;
+  fp::TimeVaryingAStar<fs::PositionVelocity,
+                       fe::STPeopleEnvironment<fs::PositionVelocity>, fb::Box,
+                       fastrack_srvs::TrackingBoundBox>
+      planner;
 
   if (!planner.Initialize(n)) {
     ROS_ERROR("%s: Failed to initialize planner.",

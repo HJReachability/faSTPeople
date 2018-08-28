@@ -46,6 +46,7 @@
 #include <crazyflie_human/OccupancyGridTime.h>
 #include <fastrack/bound/box.h>
 #include <fastrack/utils/types.h>
+#include <fastrack/utils/uncopyable.h>
 
 #include <ros/ros.h>
 
@@ -54,7 +55,7 @@ namespace environment {
 
 using bound::Box;
 
-class OccupancyGridTimeInterpolator : private Uncopyable {
+class OccupancyGridTimeInterpolator {
  public:
   ~OccupancyGridTimeInterpolator() {}
   explicit OccupancyGridTimeInterpolator(

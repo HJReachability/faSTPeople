@@ -43,24 +43,21 @@
 #ifndef FASTPEOPLE_ENVIRONMENT_STPEOPLE_ENVIRONMENT_H
 #define FASTPEOPLE_ENVIRONMENT_STPEOPLE_ENVIRONMENT_H
 
+#include <crazyflie_human/OccupancyGridTime.h>
+#include <fastpeople/environment/occupancy_grid_time_interpolator.h>
 #include <fastrack/environment/environment.h>
 #include <fastrack/trajectory/trajectory.h>
 #include <fastrack/utils/types.h>
-
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
-
-#include <crazyflie_human/OccupancyGridTime.h>
-
-
-#include <fastrack_srvs/TrackingBoundBox.h>
 #include <fastrack_msgs/Trajectory.h>
+#include <fastrack_srvs/TrackingBoundBox.h>
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <math.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -98,8 +95,8 @@ class STPeopleEnvironment
   // Register callbacks. This should still call Environment::RegisterCallbacks.
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
-  // Implement pure virtual sensor callback from base class to handle new
-  // occupancy grid time msgs. (This may be replaced by OccupancyGridCallback.)
+  // Base class sensor callback. Not implemented in favor of custom callbacks
+  // for each occupancy grid callback and trajectory callback.
   void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr& msg);
 
   // Generic callback to handle a new trajectory msg on the given topic.
@@ -108,7 +105,7 @@ class STPeopleEnvironment
 
   // Generic callback to handle a new occupancy grid msg on the given topic.
   void OccupancyGridCallback(
-      const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
+      const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
       const std::string& topic);
 
   // Topics on which agent trajectories will be published.
@@ -117,7 +114,7 @@ class STPeopleEnvironment
   // Topics on which agent occupancy grids will be published
   std::vector<std::string> occupancy_grid_topics_;
 
-  // Map from topic to trajectory, and topic to TEB. Each robot only stores the 
+  // Map from topic to trajectory, and topic to TEB. Each robot only stores the
   // trajectories of robots with higher priority number than themselves
   std::unordered_map<std::string, Trajectory<S>> traj_registry_;
   std::unordered_map<std::string, Box> bound_registry_;
@@ -157,26 +154,25 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     return false;
 
   // Collision checking with other robots.
-  for(const auto& pair : traj_registry_) {
-    const std::string& topic =  pair.first;
+  for (const auto& pair : traj_registry_) {
+    const std::string& topic = pair.first;
 
     // Get another robot's trajectory and TEB.
     const Trajectory<S>& traj = pair.second;
-    const Box teb = bound_registry_[topic];
+    const Box& teb = bound_registry_.at(topic);
 
-    // Interpolate the trajectory in time to find candidate point. 
+    // Interpolate the trajectory in time to find candidate point.
     const S& traj_pt = traj.Interpolate(time);
 
     const Vector3d other_position = traj_pt.Position();
 
-    // Check if the TEBs do not intersect. 
-    bool collision_free = 
-      (abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
-      (abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
-      (abs(position(2) - other_position(2)) < (bound.z + teb.z));
+    // Check if the TEBs do not intersect.
+    bool collision_free =
+        (abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
+        (abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
+        (abs(position(2) - other_position(2)) < (bound.z + teb.z));
 
-    if(!collision_free)
-      return false;
+    if (!collision_free) return false;
   }
 
   // Interpolation of occupancy grids.
@@ -208,18 +204,22 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
 
   // Load all the TEBs for the higher-priority robots.
   for (size_t ii = 0; ii < other_bound_srvs_name.size(); ii++) {
-    std::string srv_name = other_bound_srvs_name_[ii];
+    const std::string& srv_name = other_bound_srvs_name[ii];
     ros::service::waitForService(srv_name);
-    ros::ServiceClient bound_srv = nl.serviceClient<SB>(srv_name.c_str(), true);
+    ros::ServiceClient bound_srv =
+        nl.serviceClient<fastrack_srvs::TrackingBoundBox>(srv_name.c_str(),
+                                                          true);
 
-    TrackingBoundBox b;
+    fastrack_srvs::TrackingBoundBox b;
     if (!bound_srv.call(b)) {
       ROS_ERROR("%s: Bound server error.", name_.c_str());
       return false;
     }
 
     // TODO! Explain why using traj topic here.
-     bound_registry_.emplace(traj_topics_[ii], FromRos(b.response));
+    Box bound;
+    bound.FromRos(b.response);
+    bound_registry_.emplace(traj_topics_[ii], bound);
   }
 
   return Environment::LoadParameters(n);
@@ -254,25 +254,26 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
   // Set up all the occupancy grid subscribers.
   for (const auto& topic : occupancy_grid_topics_) {
     // Generate a lambda function for this callback.
-    boost::function<void(const fastrack_msgs::OccupancyGridTime::ConstPtr&,
+    boost::function<void(const crazyflie_human::OccupancyGridTime::ConstPtr&,
                          const std::string&)>
-        callback = [this](const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
-                          const std::string& topic) {
-          OccupancyGridCallback(msg, topic);
-        };  // callback
+        callback =
+            [this](const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
+                   const std::string& topic) {
+              OccupancyGridCallback(msg, topic);
+            };  // callback
 
     // Create a new subscriber with this callback.
-    traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::OccupancyGridTime>(
+    traj_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
         topic.c_str(), 1, boost::bind(callback, _1, topic)));
   }
 }
 
-// Implement pure virtual sensor callback from base class to handle new
-// occupancy grid time msgs.
+// Base class sensor callback. Not implemented in favor of custom callbacks
+// for each occupancy grid callback and trajectory callback.
 template <typename S>
 void STPeopleEnvironment<S>::SensorCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr& msg) {
-  occupancy_grids_ = msg;
+  throw std::runtime_error("Nothing should ever be received on this topic.");
 }
 
 // Generic callback to handle a new trajectory msg coming from robot on
@@ -292,24 +293,23 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
 }
 
 // Generic callback to handle a new occupancy grid msg on the given topic.
-void STPeopleEnvironment::OccupancyGridCallback(
-    const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
+template <typename S>
+void STPeopleEnvironment<S>::OccupancyGridCallback(
+    const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
     const std::string& topic) {
   // Check if there's already an occupancy grid stored for this topic.
-  auto iter = occupancy_grid_registry_.find(topic.c_str());
-  if (iter == occupancy_grid_registry_.end()) {
-    // Construct occupancy grid in place if doesn't exist yet.
-    // NOTE: emplace() is c++ 17 standard, may need to set flag "-std=c++17".
-    occupancy_grid_registry_.emplace(
-        topic.c_str(),
-        OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
-                                      this->lower_(1), this->upper_(1)));
-  } else {
-    // Update existing OccupancyGridTime data structure from incoming message.
-    search->second =
-        OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
-                                      this->lower_(1), this->upper_(1));
+  auto iter = occupancy_grid_registry_.find(topic);
+  if (iter != occupancy_grid_registry_.end())    {
+    // This topic already exists. Delete it and reinsert.
+    occupancy_grid_registry_.erase(iter);
   }
+
+  // Construct occupancy grid in place.
+  // NOTE: emplace() is c++ 17 standard, may need to set flag "-std=c++17".
+  occupancy_grid_registry_.emplace(
+      topic,
+      OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
+                                    this->lower_(1), this->upper_(1)));
 }
 
 }  //\namespace environment

@@ -76,8 +76,8 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
 }
 
 // Get occupancy probability at the given position at the given time.
-OccupancyGridTimeInterpolator::OccupancyProbability(const Vector3d& position,
-                                                    double time) const {
+double OccupancyGridTimeInterpolator::OccupancyProbability(
+    const Vector3d& position, double time) const {
   // Find the grid with time just past the given time.
   auto hi = occupancy_grids_.upper_bound(time);
   auto lo = hi;
@@ -90,7 +90,7 @@ OccupancyGridTimeInterpolator::OccupancyProbability(const Vector3d& position,
 
   // 'lo' is definitely a valid iterator, so find the probability there.
   const size_t lo_idx = PointToIndex(position(0), position(1), lo->second);
-  const double lo_prob = lo->second[lo_idx];
+  const double lo_prob = lo->second.data[lo_idx];
 
   // If 'hi' is not a valid iterator, then just return what we have.
   if (hi == occupancy_grids_.end()) {
@@ -100,7 +100,7 @@ OccupancyGridTimeInterpolator::OccupancyProbability(const Vector3d& position,
 
   // Extract probability at 'hi' and interpolate.
   const size_t hi_idx = PointToIndex(position(0), position(1), hi->second);
-  const double hi_prob = hi->second[hi_idx];
+  const double hi_prob = hi->second.data[hi_idx];
 
   const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
@@ -127,7 +127,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     for (double y = position(1) - bound.y; y < position(1) + bound.y;
          y += lo->second.resolution) {
       const size_t idx = PointToIndex(position(0), position(1), lo->second);
-      lo_prob += lo->second[idx];
+      lo_prob += lo->second.data[idx];
     }
   }
 
@@ -144,7 +144,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     for (double y = position(1) - bound.y; y < position(1) + bound.y;
          y += hi->second.resolution) {
       const size_t idx = PointToIndex(position(0), position(1), hi->second);
-      hi_prob += hi->second[idx];
+      hi_prob += hi->second.data[idx];
     }
   }
 
