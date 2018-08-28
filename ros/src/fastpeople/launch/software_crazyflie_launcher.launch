@@ -4,6 +4,11 @@
   <!-- Suffix to append to all topic and service names. -->
   <arg name="suffix" default=":1" />
 
+  <!-- Probabilistic planning params. -->
+  <arg name="prob_thresh" default="0.1" />
+  <arg name="collision_check_resolution" default="0.33" />
+  <arg name="grid_resolution" default="0.33" />
+
   <!-- Topics. -->
   <arg name="position_velocity_yaw_state_topic" default="/state/position_velocity_yaw$(arg suffix)" />
   <arg name="position_velocity_state_topic" default="/state/position_velocity$(arg suffix)" />

@@ -34,7 +34,7 @@
   <!-- OMPL kinematic planner node.  -->
   <node name="planner"
         pkg="fastpeople"
-        type="time_varying_astar_demo_node"
+        type="time_varying_astar_node"
         output="screen">
     <param name="topic/sensor_sub" value="$(arg sensor_sub_topic)" />
     <param name="topic/other_trajs" value="$(arg other_traj_topics)" />

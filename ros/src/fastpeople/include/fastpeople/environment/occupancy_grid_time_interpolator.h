@@ -36,42 +36,60 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Node running a TimeVaryingAStar planner.
+// Utility for accessing the time-indexed occupancy grid msg.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <fastpeople/planning/time_varying_astar.h>
-#include <fastrack/state/position_velocity.h>
-#include <fastpeople/environment/stpeople_environment.h>
-#include <fastrack/bound/box.h>
+#ifndef FASTPEOPLE_ENVIRONMENT_OCCUPANCY_GRID_TIME_INTEPOLATOR_H
+#define FASTPEOPLE_ENVIRONMENT_OCCUPANCY_GRID_TIME_INTEPOLATOR_H
 
-#include <fastrack_srvs/TrackingBoundBox.h>
-#include <fastrack_srvs/KinematicPlannerDynamics.h>
+#include <crazyflie_human/OccupancyGridTime.h>
+#include <fastrack/bound/box.h>
+#include <fastrack/utils/types.h>
+#include <fastrack/utils/uncopyable.h>
 
 #include <ros/ros.h>
 
-namespace fp = fastrack::planning;
-namespace fs = fastrack::state;
-namespace fb = fastrack::bound;
-namespace fe = fastrack::environment;
+namespace fastrack {
+namespace environment {
 
+using bound::Box;
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "PlannerDemo");
-  ros::NodeHandle n("~");
+class OccupancyGridTimeInterpolator {
+ public:
+  ~OccupancyGridTimeInterpolator() {}
+  explicit OccupancyGridTimeInterpolator(
+      const crazyflie_human::OccupancyGridTime::ConstPtr& msg, double lower_x,
+      double upper_x, double lower_y, double upper_y);
 
-  fp::TimeVaryingAStar<fs::PositionVelocity,
-                       fe::STPeopleEnvironment<fs::PositionVelocity>, fb::Box,
-                       fastrack_srvs::TrackingBoundBox>
-      planner;
+  // Get occupancy probability at the given position at the given time.
+  double OccupancyProbability(const Vector3d& position, double time) const;
 
-  if (!planner.Initialize(n)) {
-    ROS_ERROR("%s: Failed to initialize planner.",
-              ros::this_node::getName().c_str());
-    return EXIT_FAILURE;
-  }
+  // Get total occupancy probability within the given tracking error bound,
+  // centered at the given position, at the given time.
+  double OccupancyProbability(const Vector3d& position, const Box& bound,
+                              double time) const;
 
-  ros::spin();
+ private:
+  struct OccupancyGrid {
+    std::vector<double> data;
+    double resolution;
+    size_t num_cells_x;
+    size_t num_cells_y;
+  }; //\struct OccupancyGrid
 
-  return EXIT_SUCCESS;
-}
+  // Get the 1D grid index of the cell which includes the given point.
+  size_t PointToIndex(double x, double y, const OccupancyGrid& grid) const;
+
+  // Lower and upper bounds in x/y dimensions.
+  const double lower_x_, upper_x_;
+  const double lower_y_, upper_y_;
+
+  // Store msg as map from time to flattened occupancy grid.
+  std::map<double, OccupancyGrid> occupancy_grids_;
+};  //\class OccupancyGridTimeInterpolator
+
+}  //\namespace environment
+}  //\namespace fastrack
+
+#endif
