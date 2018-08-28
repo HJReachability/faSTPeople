@@ -175,8 +175,19 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     if (!collision_free) return false;
   }
 
-  // Interpolation of occupancy grids.
-  // TODO!
+  // Compute the total collision probability with each human and noisyOR
+  // the probabilities togther to check if beneath collision threshold.
+  double noisyOR_complement = 1.0;
+  for(const auto& pair : occupancy_grid_registry_) {
+    const OccupancyGridTimeInterpolator& interpolator = pair.second;
+
+    // Interpolate the human's occupancy grid in time and then integrate the
+    // probability mass inside the TEB.
+    double integrated_prob = interpolator.OccupancyProbability(position, bound, time);
+    noisyOR_complement *= 1-integrated_prob;
+    if(noisyOR_complement > collision_threshold_)
+      return false;
+  }
 
   return true;
 }
@@ -216,7 +227,8 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
       return false;
     }
 
-    // TODO! Explain why using traj topic here.
+    // Bound registry has traj_topic keys for easy TEB lookup
+    // for a given robot's trajectory. Useful when collision checking.
     Box bound;
     bound.FromRos(b.response);
     bound_registry_.emplace(traj_topics_[ii], bound);
