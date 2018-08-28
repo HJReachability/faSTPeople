@@ -52,6 +52,8 @@
 
 #include <crazyflie_human/OccupancyGridTime.h>
 
+
+#include <fastrack_srvs/TrackingBoundBox.h>
 #include <fastrack_msgs/Trajectory.h>
 
 #include <geometry_msgs/Point.h>
@@ -116,12 +118,10 @@ private:
   // Topics on which agent occupancy grids will be published
   std::vector<std::string> occupancy_grid_topics_;
 
-  // Map from robot priority to trajectory. Each robot only stores the 
+  // Map from topic to trajectory, and topic to TEB. Each robot only stores the 
   // trajectories of robots with higher priority number than themselves
-  std::unordered_map<size_t, Trajectory<S>> traj_registry_;
-
-  // List of tracking error bounds (TEB) corresponding to trajectories.
-  std::vector<Box> bound_registry_;
+  std::unordered_map<std::string, Trajectory<S>> traj_registry_;
+  std::unordered_map<std::string, Box> bound_registry_;
 
   // Map from topic to occupancy grid.
   std::unordered_map<std::string, OccupancyGridTimeInterpolator>
@@ -130,9 +130,6 @@ private:
   // One subscriber for each trajectory/occupancy grid topic we're listening to.
   std::vector<ros::Subscriber> traj_subs_;
   std::vector<ros::Subscriber> occupancy_grid_subs_;
-
-  // Radius of the sphere representing the quadrotor using this environment.
-  double vehicle_size_;
 
   // Threshold for probability of collision.
   double collision_threshold_;
@@ -148,13 +145,13 @@ template <typename S>
 bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
                                   const Box &bound,
                                   double time) const {
-    if (!initialized_) {
-    ROS_WARN("%s: Tried to collision check an uninitialized STPeopleEnvironment.",
-             name_.c_str());
-    return false;
-    }
+  if (!initialized_) {
+  ROS_WARN("%s: Tried to collision check an uninitialized STPeopleEnvironment.",
+           name_.c_str());
+  return false;
+  }
 
-  // check against the boundary of the occupancy grid
+  // Check against the boundary of the occupancy grid.
   if (position(0) < lower_(0) + bound.x ||
       position(0) > upper_(0) - bound.x ||
       position(1) < lower_(1) + bound.y ||
@@ -163,40 +160,26 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
       position(2) > upper_(2) - bound.z)
     return false;
 
-  // Find which points on other robots' trajectories to collision check with
-  // and their corresponding tracking error bounds.
-  std::vector<S> traj_points(traj_registry_.size());
-  std::vector<Box> tebs(bound_registry_.size());
-  size_t i = 0;
-  // TODO: Are bound topics in the same order as trajectory topics?
-  for (auto it = bound_registry_.begin(); it != bound_registry_.end(); ++it) {
-    Box teb = it->second;
-    tebs[i] = teb;
-    ++i;
-  }
-
-  i = 0;
-  for (auto it = traj_registry_.begin(); it != traj_registry_.end(); ++it) {
-    S traj_pt = it->second.Interpolate(time);
-    traj_points[i] = traj_pt;
-    ++i;
-  }
-
   // Collision checking with other robots.
-  for (size_t ii = 0; ii < traj_points.size(); ii++) {
-    const S& p = traj_points[ii];
-    const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
+  for(const auto& pair : traj_registry_) {
+    const std::string& topic =  pair.first;
 
-    // Find closest point in the tracking bound to the trajectory point.
-    Vector3d closest_point;
-    for (size_t jj = 0; jj < 3; jj++) {
-      closest_point(jj) =
-        std::min(position(jj) + bound_vector(jj),
-                 std::max(position(jj) - bound_vector(jj), p.Configuration()(jj)));
-    }
+    // Get another robot's trajectory and TEB.
+    const Trajectory<S>& traj = pair.second;
+    const Box teb = bound_registry_[topic];
 
-    // Check distance to closest point.
-    if ((closest_point - p.Configuration()).norm() <= vehicle_size_)
+    // Interpolate the trajectory in time to find candidate point. 
+    const S& traj_pt = traj.Interpolate(time);
+
+    double center_other = traj_pt.Configuration();
+
+    // Check if the TEBs do not intersect. 
+    bool collision_free = 
+      (abs(position(0) - traj_pt.Configuration()(0)) < (bound.x + teb.x)) &&
+      (abs(position(1) - traj_pt.Configuration()(1)) < (bound.y + teb.y)) &&
+      (abs(position(2) - traj_pt.Configuration()(2)) < (bound.z + teb.z));
+
+    if(!collision_free)
       return false;
   }
 
@@ -271,7 +254,6 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
   if (!nl.getParam("topic/other_trajs", traj_topics_)) return false;
   if (!nl.getParam("topic/other_occupancy_grids", occupancy_grid_topics_))
     return false;
-  if (!nl.getParam("vehicle_size", vehicle_size_)) return false;
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
   if (!nl.getParam("other_bound_srvs", other_bound_srvs_name)) return false;
 
@@ -281,13 +263,14 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
     ros::service::waitForService(srv_name);
     ros::ServiceClient bound_srv = nl.serviceClient<SB>(srv_name.c_str(), true);
 
-    SB b;
+    TrackingBoundBox b;
     if (!bound_srv.call(b)) {
       ROS_ERROR("%s: Bound server error.", name_.c_str());
       return false;
     }
 
-    bound_registry_[ii].FromRos(b.response);
+    // TODO! Explain why using traj topic here.
+     bound_registry_.emplace(traj_topics_[ii], FromRos(b.response));
   }
 
   return Environment::LoadParameters(n);
