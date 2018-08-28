@@ -8,6 +8,11 @@
   <!-- Record? -->
   <arg name="record" default="false" />
 
+  <!-- Probabilistic planning params. -->
+  <arg name="prob_thresh" default="0.1" />
+  <arg name="collision_check_resolution" default="0.33" />
+  <arg name="grid_resolution" default="0.33" />
+
   <!-- Record a rosbag. -->
   <node pkg="rosbag"
 	      type="record"
@@ -19,12 +24,18 @@
   <!-- ========================== Robot 1. ========================== -->
   <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
     <arg name="suffix" value="$(arg robot1)" />
+    <arg name="prob_thresh" value="$(arg prob_thresh)" />
+    <arg name="collision_check_resolution" value="$(arg collision_check_resolution)" />
+    <arg name="grid_resolution" value="$(arg grid_resolution)" />
     <arg name="other_traj_topics" value="[/traj$(arg robot2)]" />
   </include>
 
   <!-- ========================== Robot 2. ========================== -->
   <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
     <arg name="suffix" value="$(arg robot2)" />
+    <arg name="prob_thresh" value="$(arg prob_thresh)" />
+    <arg name="collision_check_resolution" value="$(arg collision_check_resolution)" />
+    <arg name="grid_resolution" value="$(arg grid_resolution)" />
     <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
   </include>
 </launch>
