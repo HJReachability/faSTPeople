@@ -59,9 +59,8 @@
 #include <math.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
-#include <vector>
 #include <unordered_map>
-
+#include <vector>
 
 namespace fastrack {
 namespace environment {
@@ -72,17 +71,17 @@ using trajectory::Trajectory;
 template <typename S>
 class STPeopleEnvironment
     : public Environment<crazyflie_human::OccupancyGridTime, Empty> {
-public:
+ public:
   ~STPeopleEnvironment() {}
   explicit STPeopleEnvironment() : Environment() {}
 
   // Derived classes must provide a collision checker which returns true if
   // and only if the provided position is a valid collision-free configuration.
   // Provide a separate collision check for each type of tracking error bound.
-  bool IsValid(const Vector3d &position, const Box &bound, double time) const;
+  bool IsValid(const Vector3d& position, const Box& bound, double time) const;
 
   // Generate a sensor measurement.
-  crazyflie_human::OccupancyGridTime SimulateSensor(const Empty &params) const {
+  crazyflie_human::OccupancyGridTime SimulateSensor(const Empty& params) const {
     throw std::runtime_error("SimulateSensor is not implemented.");
     return crazyflie_human::OccupancyGridTime();
   }
@@ -90,25 +89,25 @@ public:
   // Derived classes must have some sort of visualization through RViz.
   void Visualize() const;
 
-private:
+ private:
   // Load parameters. This should still call Environment::LoadParameters.
-  bool LoadParameters(const ros::NodeHandle &n);
+  bool LoadParameters(const ros::NodeHandle& n);
 
   // Register callbacks. This should still call Environment::RegisterCallbacks.
-  bool RegisterCallbacks(const ros::NodeHandle &n);
+  bool RegisterCallbacks(const ros::NodeHandle& n);
 
   // Implement pure virtual sensor callback from base class to handle new
   // occupancy grid time msgs. (This may be replaced by OccupancyGridCallback.)
-  void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr &msg);
+  void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr& msg);
 
   // Generic callback to handle a new trajectory msg on the given topic.
-  void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr &msg,
-                          const std::string &topic);
+  void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr& msg,
+                          const std::string& topic);
 
   // Generic callback to handle a new occupancy grid msg on the given topic.
   void OccupancyGridCallback(
-                          const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
-                          const std::string &topic);
+      const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
+      const std::string& topic);
 
   // Topics on which agent trajectories will be published.
   std::vector<std::string> traj_topics_;
@@ -116,7 +115,7 @@ private:
   // Topics on which agent occupancy grids will be published
   std::vector<std::string> occupancy_grid_topics_;
 
-  // Map from robot priority to trajectory. Each robot only stores the 
+  // Map from robot priority to trajectory. Each robot only stores the
   // trajectories of robots with higher priority number than themselves
   std::unordered_map<size_t, Trajectory<S>> traj_registry_;
 
@@ -136,31 +135,28 @@ private:
 
   // Threshold for probability of collision.
   double collision_threshold_;
-}; //\class STPeopleEnvironment
+};  //\class STPeopleEnvironment
 
-
-// -------------------------------- IMPLEMENTATION ------------------------------------- //
+// -------------------------------- IMPLEMENTATION
+// ------------------------------------- //
 
 // Derived classes must provide a collision checker which returns true if
 // and only if the provided position is a valid collision-free configuration.
 // Provide a separate collision check for each type of tracking error bound.
 template <typename S>
-bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
-                                  const Box &bound,
-                                  double time) const {
-    if (!initialized_) {
-    ROS_WARN("%s: Tried to collision check an uninitialized STPeopleEnvironment.",
-             name_.c_str());
+bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
+                                     double time) const {
+  if (!initialized_) {
+    ROS_WARN(
+        "%s: Tried to collision check an uninitialized STPeopleEnvironment.",
+        name_.c_str());
     return false;
-    }
+  }
 
   // check against the boundary of the occupancy grid
-  if (position(0) < lower_(0) + bound.x ||
-      position(0) > upper_(0) - bound.x ||
-      position(1) < lower_(1) + bound.y ||
-      position(1) > upper_(1) - bound.y ||
-      position(2) < lower_(2) + bound.z ||
-      position(2) > upper_(2) - bound.z)
+  if (position(0) < lower_(0) + bound.x || position(0) > upper_(0) - bound.x ||
+      position(1) < lower_(1) + bound.y || position(1) > upper_(1) - bound.y ||
+      position(2) < lower_(2) + bound.z || position(2) > upper_(2) - bound.z)
     return false;
 
   // Find which points on other robots' trajectories to collision check with
@@ -185,14 +181,15 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
   // Collision checking with other robots.
   for (size_t ii = 0; ii < traj_points.size(); ii++) {
     const S& p = traj_points[ii];
-    const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y, bound.z + tebs[ii].z);
+    const Vector3d bound_vector(bound.x + tebs[ii].x, bound.y + tebs[ii].y,
+                                bound.z + tebs[ii].z);
 
     // Find closest point in the tracking bound to the trajectory point.
     Vector3d closest_point;
     for (size_t jj = 0; jj < 3; jj++) {
-      closest_point(jj) =
-        std::min(position(jj) + bound_vector(jj),
-                 std::max(position(jj) - bound_vector(jj), p.Configuration()(jj)));
+      closest_point(jj) = std::min(
+          position(jj) + bound_vector(jj),
+          std::max(position(jj) - bound_vector(jj), p.Configuration()(jj)));
     }
 
     // Check distance to closest point.
@@ -201,54 +198,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
   }
 
   // Interpolation of occupancy grids.
-  std::vector<double> data1D;
-  std::vector<crazyflie_human::ProbabilityGrid> gridarr = occupancy_grids_->gridarray;
-  double last_time_stamp = gridarr[gridarr.size() - 1].header.stamp.toSec();
-  if (time >= last_time_stamp) {
-    data1D = gridarr[gridarr.size() - 1].data;
-  } else {
-    for (size_t ii = 0; ii < gridarr.size() - 1; ++ii) {
-      double current_time_stamp = gridarr[ii].header.stamp.toSec();
-      if (time == current_time_stamp) {
-        data1D = gridarr[ii].data;
-        break;
-      }
-      double next_time_stamp = gridarr[ii + 1].header.stamp.toSec();
-      if ((current_time_stamp < time) && (next_time_stamp > time)) {
-        std::vector<double> prev_data = gridarr[ii].data;
-        std::vector<double> next_data = gridarr[ii + 1].data;
-        for (size_t jj = 0; jj < prev_data.size(); ++jj) {
-          double prev = prev_data[jj];
-          double next = next_data[jj];
-          data1D[jj] = prev + (next - prev) * ((time - current_time_stamp) / (next_time_stamp - current_time_stamp));
-        }
-        break;
-      }
-    }
-  }
-
-  // Convert 1D occupancy grid to 2D.
-  size_t width = gridarr[time].width;
-  size_t height = gridarr[time].height;
-  double data2D[width][height];
-  for (size_t ii = 0; ii < (sizeof(data1D)/sizeof(data1D)); ++ii) {
-      data2D[ii % width][ii/width] = data1D[ii];
-  }
-
-  // Collision checking with occupancy grid.
-  double collision_prob = 0;
-  double radius = sqrt(pow(bound.x, 2) + pow(bound.y, 2)) + vehicle_size_;
-  for (size_t ii = 0; ii < width; ++ii){
-    for (size_t jj = 0; jj < height; ++jj){
-      double distance = sqrt(pow((ii - position(0)), 2) + pow((jj - position(1)), 2));
-      if (distance <= radius)
-        collision_prob += data2D[ii][jj];
-    }
-  }
-
-  if (collision_prob >= collision_threshold_)
-    return false;
-
+  // TODO!
 
   return true;
 }
@@ -261,7 +211,7 @@ void STPeopleEnvironment<S>::Visualize() const {
 
 // Load parameters. This should still call Environment::LoadParameters.
 template <typename S>
-bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
+bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
   ros::NodeHandle nl(n);
   name_ = ros::names::append(n.getNamespace(), "STPeopleEnvironment");
 
@@ -275,8 +225,8 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
   if (!nl.getParam("other_bound_srvs", other_bound_srvs_name)) return false;
 
-  // Load all the TEBs for the higher-priority robots. 
-  for(size_t ii=0; ii < other_bound_srvs_name.size(); ii++){
+  // Load all the TEBs for the higher-priority robots.
+  for (size_t ii = 0; ii < other_bound_srvs_name.size(); ii++) {
     std::string srv_name = other_bound_srvs_name_[ii];
     ros::service::waitForService(srv_name);
     ros::ServiceClient bound_srv = nl.serviceClient<SB>(srv_name.c_str(), true);
@@ -295,7 +245,7 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
 
 // Register callbacks. This should still call Environment::RegisterCallbacks.
 template <typename S>
-bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
+bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
   if (!Environment<crazyflie_human::OccupancyGridTime,
                    Empty>::RegisterCallbacks(n)) {
     ROS_ERROR("%s: Environment register callbacks failed.", name_.c_str());
@@ -305,12 +255,12 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
   ros::NodeHandle nl(n);
 
   // Set up all the trajectory subscribers.
-  for (const auto &topic : traj_topics_) {
+  for (const auto& topic : traj_topics_) {
     // Generate a lambda function for this callback.
-    boost::function<void(const fastrack_msgs::Trajectory::ConstPtr &,
-                         const std::string &)>
-        callback = [this](const fastrack_msgs::Trajectory::ConstPtr &msg,
-                          const std::string &topic) {
+    boost::function<void(const fastrack_msgs::Trajectory::ConstPtr&,
+                         const std::string&)>
+        callback = [this](const fastrack_msgs::Trajectory::ConstPtr& msg,
+                          const std::string& topic) {
           TrajectoryCallback(msg, topic);
         };  // callback
 
@@ -320,12 +270,12 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
   }
 
   // Set up all the occupancy grid subscribers.
-  for (const auto &topic : occupancy_grid_topics_) {
+  for (const auto& topic : occupancy_grid_topics_) {
     // Generate a lambda function for this callback.
-    boost::function<void(const fastrack_msgs::OccupancyGridTime::ConstPtr &,
-                         const std::string &)>
-        callback = [this](const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
-                          const std::string &topic) {
+    boost::function<void(const fastrack_msgs::OccupancyGridTime::ConstPtr&,
+                         const std::string&)>
+        callback = [this](const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
+                          const std::string& topic) {
           OccupancyGridCallback(msg, topic);
         };  // callback
 
@@ -339,8 +289,7 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
 // occupancy grid time msgs.
 template <typename S>
 void STPeopleEnvironment<S>::SensorCallback(
-    const crazyflie_human::OccupancyGridTime::ConstPtr &msg) {
-
+    const crazyflie_human::OccupancyGridTime::ConstPtr& msg) {
   occupancy_grids_ = msg;
 }
 
@@ -348,36 +297,40 @@ void STPeopleEnvironment<S>::SensorCallback(
 // the given topic.
 template <typename S>
 void STPeopleEnvironment<S>::TrajectoryCallback(
-    const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
+    const fastrack_msgs::Trajectory::ConstPtr& msg, const std::string& topic) {
   // Check if there's already a trajectory stored for this topic.
   auto iter = traj_registry_.find(topic);
   if (iter == traj_registry_.end()) {
-   // This is a topic we haven't seen before.
+    // This is a topic we haven't seen before.
     traj_registry_.emplace(topic, Trajectory<S>(msg));
   } else {
-   // We've already seen this topic, so just update the recorded trajectory.
+    // We've already seen this topic, so just update the recorded trajectory.
     iter->second = Trajectory<S>(msg);
   }
 }
 
 // Generic callback to handle a new occupancy grid msg on the given topic.
 void STPeopleEnvironment::OccupancyGridCallback(
-                        const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
-                        const std::string &topic) {
+    const fastrack_msgs::OccupancyGridTime::ConstPtr& msg,
+    const std::string& topic) {
   // Check if there's already an occupancy grid stored for this topic.
   auto iter = occupancy_grid_registry_.find(topic.c_str());
   if (iter == occupancy_grid_registry_.end()) {
     // Construct occupancy grid in place if doesn't exist yet.
     // NOTE: emplace() is c++ 17 standard, may need to set flag "-std=c++17".
-    occupancy_grid_registry_.emplace(topic.c_str(),
-                                     OccupancyGridTimeInterpolator(msg));
+    occupancy_grid_registry_.emplace(
+        topic.c_str(),
+        OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
+                                      this->lower_(1), this->upper_(1)));
   } else {
     // Update existing OccupancyGridTime data structure from incoming message.
-    search->second = OccupancyGridTimeInterpolator(msg);
+    search->second =
+        OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
+                                      this->lower_(1), this->upper_(1));
   }
 }
 
-} //\namespace environment
-} //\namespace fastrack
+}  //\namespace environment
+}  //\namespace fastrack
 
 #endif
