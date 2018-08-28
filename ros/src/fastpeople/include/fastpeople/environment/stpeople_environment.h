@@ -131,8 +131,7 @@ class STPeopleEnvironment
   double collision_threshold_;
 };  //\class STPeopleEnvironment
 
-// -------------------------------- IMPLEMENTATION
-// ------------------------------------- //
+// ----------------------------- IMPLEMENTATION ----------------------------- //
 
 // Derived classes must provide a collision checker which returns true if
 // and only if the provided position is a valid collision-free configuration.
@@ -168,9 +167,9 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
 
     // Check if the TEBs do not intersect.
     bool collision_free =
-        (abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
-        (abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
-        (abs(position(2) - other_position(2)) < (bound.z + teb.z));
+        (std::abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
+        (std::abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
+        (std::abs(position(2) - other_position(2)) < (bound.z + teb.z));
 
     if (!collision_free) return false;
   }
@@ -178,14 +177,15 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
   // Compute the total collision probability with each human and noisyOR
   // the probabilities togther to check if beneath collision threshold.
   double noisyOR_complement = 1.0;
-  for(const auto& pair : occupancy_grid_registry_) {
+  for (const auto& pair : occupancy_grid_registry_) {
     const OccupancyGridTimeInterpolator& interpolator = pair.second;
 
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
-    double integrated_prob = interpolator.OccupancyProbability(position, bound, time);
-    noisyOR_complement *= 1-integrated_prob;
-    if(noisyOR_complement > collision_threshold_)
+    const double integrated_prob = 
+      interpolator.OccupancyProbability(position, bound, time);
+    noisyOR_complement *= 1.0 - integrated_prob;
+    if (noisyOR_complement > collision_threshold_)
       return false;
   }
 
@@ -260,7 +260,7 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
 
     // Create a new subscriber with this callback.
     traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::Trajectory>(
-        topic.c_str(), 1, boost::bind(callback, _1, topic)));
+        topic, 1, boost::bind(callback, _1, topic)));
   }
 
   // Set up all the occupancy grid subscribers.
@@ -276,7 +276,7 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
 
     // Create a new subscriber with this callback.
     traj_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
-        topic.c_str(), 1, boost::bind(callback, _1, topic)));
+        topic, 1, boost::bind(callback, _1, topic)));
   }
 }
 
