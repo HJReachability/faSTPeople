@@ -98,16 +98,23 @@ private:
   bool RegisterCallbacks(const ros::NodeHandle &n);
 
   // Implement pure virtual sensor callback from base class to handle new
-  // occupancy grid time msgs.
+  // occupancy grid time msgs. (This may be replaced by OccupancyGridCallback.)
   void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr &msg);
 
-  // Generic callback to handle a new trajectory msg coming from robot on
-  // the given topic.
+  // Generic callback to handle a new trajectory msg on the given topic.
   void TrajectoryCallback(const fastrack_msgs::Trajectory::ConstPtr &msg,
                           const std::string &topic);
 
-  // Topics on which other robots' trajectories will be published.
-  std::vector<std::string> topics_;
+  // Generic callback to handle a new occupancy grid msg on the given topic.
+  void OccupancyGridCallback(
+                          const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                          const std::string &topic);
+
+  // Topics on which agent trajectories will be published.
+  std::vector<std::string> traj_topics_;
+
+  // Topics on which agent occupancy grids will be published
+  std::vector<std::string> occupancy_grid_topics_;
 
   // Map from robot priority to trajectory. Each robot only stores the 
   // trajectories of robots with higher priority number than themselves
@@ -116,11 +123,13 @@ private:
   // List of tracking error bounds (TEB) corresponding to trajectories.
   std::vector<Box> bound_registry_;
 
-  // One subscriber for each trajectory topic we're listening to.
-  std::vector<ros::Subscriber> traj_subs_;
+  // Map from topic to occupancy grid.
+  std::unordered_map<std::string, OccupancyGridTimeInterpolator>
+      occupancy_grid_registry_;
 
-  // Store OccupancyGridTime messages.   
-  crazyflie_human::OccupancyGridTime::ConstPtr occupancy_grids_;
+  // One subscriber for each trajectory/occupancy grid topic we're listening to.
+  std::vector<ros::Subscriber> traj_subs_;
+  std::vector<ros::Subscriber> occupancy_grid_subs_;
 
   // Radius of the sphere representing the quadrotor using this environment.
   double vehicle_size_;
@@ -159,7 +168,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
   std::vector<S> traj_points(traj_registry_.size());
   std::vector<Box> tebs(bound_registry_.size());
   size_t i = 0;
-  // TODO: Are bound topics in the same order as trajectory topics? 
+  // TODO: Are bound topics in the same order as trajectory topics?
   for (auto it = bound_registry_.begin(); it != bound_registry_.end(); ++it) {
     Box teb = it->second;
     tebs[i] = teb;
@@ -192,10 +201,10 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
   }
 
   // Interpolation of occupancy grids.
-  std::vector<double> data1D;  
+  std::vector<double> data1D;
   std::vector<crazyflie_human::ProbabilityGrid> gridarr = occupancy_grids_->gridarray;
   double last_time_stamp = gridarr[gridarr.size() - 1].header.stamp.toSec();
-  if (time >= last_time_stamp) { 
+  if (time >= last_time_stamp) {
     data1D = gridarr[gridarr.size() - 1].data;
   } else {
     for (size_t ii = 0; ii < gridarr.size() - 1; ++ii) {
@@ -203,7 +212,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d &position,
       if (time == current_time_stamp) {
         data1D = gridarr[ii].data;
         break;
-      } 
+      }
       double next_time_stamp = gridarr[ii + 1].header.stamp.toSec();
       if ((current_time_stamp < time) && (next_time_stamp > time)) {
         std::vector<double> prev_data = gridarr[ii].data;
@@ -259,7 +268,9 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle &n) {
   // Service for loading bound.
   std::vector<std::string> other_bound_srvs_name;
 
-  if (!nl.getParam("topic/other_trajs", topics_)) return false;
+  if (!nl.getParam("topic/other_trajs", traj_topics_)) return false;
+  if (!nl.getParam("topic/other_occupancy_grids", occupancy_grid_topics_))
+    return false;
   if (!nl.getParam("vehicle_size", vehicle_size_)) return false;
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
   if (!nl.getParam("other_bound_srvs", other_bound_srvs_name)) return false;
@@ -293,18 +304,33 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle &n) {
 
   ros::NodeHandle nl(n);
 
-  // Set up all the subscribers.
-  for (const auto &topic : topics_) {
+  // Set up all the trajectory subscribers.
+  for (const auto &topic : traj_topics_) {
     // Generate a lambda function for this callback.
     boost::function<void(const fastrack_msgs::Trajectory::ConstPtr &,
                          const std::string &)>
         callback = [this](const fastrack_msgs::Trajectory::ConstPtr &msg,
                           const std::string &topic) {
           TrajectoryCallback(msg, topic);
-        }; // callback
+        };  // callback
 
     // Create a new subscriber with this callback.
     traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::Trajectory>(
+        topic.c_str(), 1, boost::bind(callback, _1, topic)));
+  }
+
+  // Set up all the occupancy grid subscribers.
+  for (const auto &topic : occupancy_grid_topics_) {
+    // Generate a lambda function for this callback.
+    boost::function<void(const fastrack_msgs::OccupancyGridTime::ConstPtr &,
+                         const std::string &)>
+        callback = [this](const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                          const std::string &topic) {
+          OccupancyGridCallback(msg, topic);
+        };  // callback
+
+    // Create a new subscriber with this callback.
+    traj_subs_.emplace_back(nl.subscribe<fastrack_msgs::OccupancyGridTime>(
         topic.c_str(), 1, boost::bind(callback, _1, topic)));
   }
 }
@@ -323,12 +349,7 @@ void STPeopleEnvironment<S>::SensorCallback(
 template <typename S>
 void STPeopleEnvironment<S>::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr &msg, const std::string &topic) {
-/*
-  if(traj_registry_.contains(topic)) {
-    traj_registry_.erase(topic);
-  }
-  traj_registry_.insert({topic, Trajectory(msg)});
-*/
+  // Check if there's already a trajectory stored for this topic.
   auto iter = traj_registry_.find(topic);
   if (iter == traj_registry_.end()) {
    // This is a topic we haven't seen before.
@@ -336,11 +357,25 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
   } else {
    // We've already seen this topic, so just update the recorded trajectory.
     iter->second = Trajectory<S>(msg);
+  }
 }
 
-
+// Generic callback to handle a new occupancy grid msg on the given topic.
+void STPeopleEnvironment::OccupancyGridCallback(
+                        const fastrack_msgs::OccupancyGridTime::ConstPtr &msg,
+                        const std::string &topic) {
+  // Check if there's already an occupancy grid stored for this topic.
+  auto iter = occupancy_grid_registry_.find(topic.c_str());
+  if (iter == occupancy_grid_registry_.end()) {
+    // Construct occupancy grid in place if doesn't exist yet.
+    // NOTE: emplace() is c++ 17 standard, may need to set flag "-std=c++17".
+    occupancy_grid_registry_.emplace(topic.c_str(),
+                                     OccupancyGridTimeInterpolator(msg));
+  } else {
+    // Update existing OccupancyGridTime data structure from incoming message.
+    search->second = OccupancyGridTimeInterpolator(msg);
+  }
 }
-
 
 } //\namespace environment
 } //\namespace fastrack
