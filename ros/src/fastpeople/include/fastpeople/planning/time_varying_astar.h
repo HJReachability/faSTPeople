@@ -49,6 +49,7 @@
 #include <fastrack/planning/kinematic_planner.h>
 
 #include <boost/functional/hash.hpp>
+#include <list>
 #include <set>
 #include <unordered_set>
 
@@ -61,7 +62,6 @@ template <typename S, typename E, typename B, typename SB>
 class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
  public:
   ~TimeVaryingAStar() {}
-
   explicit TimeVaryingAStar() : KinematicPlanner<S, E, B, SB>() {}
 
   // Plan a trajectory from the given start to goal states starting
@@ -88,7 +88,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
     const double cost_to_come_;
     const double heuristic_;
     const double priority_;
-    double collision_prob_;
 
     // Factory method.
     static inline Ptr Create(const S& point, const ConstPtr& parent,
@@ -107,7 +106,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
       std::cout << "  cost_to_come: " << cost_to_come_ << std::endl;
       std::cout << "  heuristic: " << heuristic_ << std::endl;
       std::cout << "  priority: " << priority_ << std::endl;
-      std::cout << "  collision prob: " << collision_prob_ << std::endl;
       if (parent_ != nullptr)
         std::cout << "  parent id: " << parent_->id_ << std::endl;
     }
@@ -154,8 +152,7 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
           time_(time),
           cost_to_come_(cost_to_come),
           heuristic_(heuristic),
-          priority_(heuristic + cost_to_come),
-          collision_prob_(0.0) {}
+          priority_(heuristic + cost_to_come) {}
 
   };  //\struct Node
 
@@ -174,13 +171,14 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   // Walk backward from the given node to the root to create a Trajectory.
   Trajectory<S> GenerateTrajectory(const typename Node::ConstPtr& node) const;
 
-  // Helper function populating neighbors in each dimension
-  std::vector<S> NeighborsFinder(const S& point, const VectorXd& neighbor,
-                                 size_t dimension) const;
+  // Helper function to find all neighboring nodes from the specified dimension
+  // to the final dimension.
+  std::list<VectorXd> FindNeighborsFromDimension(const VectorXd& config,
+                                                 size_t dimension) const;
 
   // Get the neighbors of the given point on the implicit grid.
   // NOTE! Include the given point.
-  std::vector<S> Neighbors(const S& point) const;
+  std::list<VectorXd> Neighbors(const S& point) const;
 
   // Returns the total cost to get to point. best_time is the fastest time
   // it takes to go from the parent to the point.
@@ -248,8 +246,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     }
 
     if (open.empty()) {
-      ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.",
-                         KinematicPlanner<S, E, B, SB>::name_.c_str());
+      ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", this->name_.c_str());
       return Trajectory<S>();
     }
 
@@ -258,9 +255,8 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     // TODO this is for debugging!
     // next->PrintNode(start_time);
 
-    ROS_INFO("%s: Open list size: %zu, Next priority: %f",
-             KinematicPlanner<S, E, B, SB>::name_.c_str(), open.size(),
-             next->priority_);
+    ROS_INFO("%s: Open list size: %zu, Next priority: %f", this->name_.c_str(),
+             open.size(), next->priority_);
 
     // Pop the next node from the open_registry and open set.
     open_registry.erase(
@@ -276,8 +272,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
       // Have to connect the goal point to the last sampled grid point.
       const double best_time =
-          KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(
-              parent_node->point_, end);
+          this->dynamics_.BestPossibleTime(parent_node->point_, end);
       const double terminus_time = parent_node->time_ + best_time;
       const double terminus_cost =
           ComputeCostToCome(parent_node, end, best_time);
@@ -292,31 +287,32 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     closed_registry.insert(next);
 
     // Expand and add to the list.
-    for (const S& neighbor : Neighbors(next->point_)) {
+    for (const VectorXd& neighbor : Neighbors(next->point_)) {
+      const S neighbor_state(neighbor);
+
       // Compute the time at which we'll reach this neighbor.
       const double best_neigh_time =
-          (neighbor.Configuration().isApprox(next->point_.Configuration(),
-                                             1e-8))
+          (neighbor.isApprox(next->point_.Configuration(), 1e-8))
               ? kStayPutTime
-              : KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(
-                    next->point_, neighbor);
+              : this->dynamics_.BestPossibleTime(next->point_, neighbor_state);
 
       // Gotta sanity check if we got a valid neighbor time.
       if (std::isinf(best_neigh_time))
-        throw std::runtime_error("neighbor time infinity");
+        throw std::runtime_error("Neighbor time was infinity.");
 
       const double neighbor_time = next->time_ + best_neigh_time;
 
       // Compute cost to get to the neighbor.
       const double neighbor_cost =
-          ComputeCostToCome(next, neighbor, best_neigh_time);
+          ComputeCostToCome(next, neighbor_state, best_neigh_time);
 
       // Compute heuristic from neighbor to stop.
-      const double neighbor_heuristic = ComputeHeuristic(neighbor, end);
+      const double neighbor_heuristic = ComputeHeuristic(neighbor_state, end);
 
       // Discard if this is on the closed list.
-      const typename Node::Ptr neighbor_node = Node::Create(
-          neighbor, next, neighbor_time, neighbor_cost, neighbor_heuristic);
+      const typename Node::Ptr neighbor_node =
+          Node::Create(neighbor_state, next, neighbor_time, neighbor_cost,
+                       neighbor_heuristic);
       if (closed_registry.count(neighbor_node) > 0) {
         // neighbor_node->PrintNode(start_time);
         ROS_WARN(
@@ -326,13 +322,13 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       }
 
       // Collision check this line segment (and store the collision probability)
-      if (!CollisionCheck(next->point_, neighbor, next->time_, neighbor_time)) {
+      if (!CollisionCheck(next->point_, neighbor_state, next->time_, neighbor_time)) {
         // neighbor_node->PrintNode(start_time);
         ROS_WARN("Did not add neighbor_node because its in collision!");
         continue;
       }
 
-      ROS_INFO("Adding neighbor node...");
+      // ROS_INFO("Adding neighbor node...");
       // neighbor_node->PrintNode(start_time);
 
       // Check if we're in the open set.
@@ -342,7 +338,6 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         if (neighbor_node->priority_ < (*match)->priority_) {
           // Remove the node that matches
           // and replace it with the new/updated one.
-
           RemoveFromMultiset(*match, open);
           open.insert(neighbor_node);
 
@@ -371,15 +366,13 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeCostToCome(
 
   // If best_time is not valid or provided by the call, compute it now.
   if (best_time < 0.0)
-    best_time = KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(
-        parent->point_, point);
+    best_time = this->dynamics_.BestPossibleTime(parent->point_, point);
 
   // Cost to get to the parent contains distance + time. Add to this
-  // the distance from the parent to the current point and the time
-
+  // the distance from the parent to the current point and the time.
   // option 1: parent->cost_to_come_ + best_time
-  // option 2 (doesn't work!): parent->cost_to_come_ + best_time +
-  // 0.001*(parent->point_ - point).norm();
+  // option 2: (doesn't work!): parent->cost_to_come_ + best_time +
+  //           0.001*(parent->point_ - point).norm();
   // option 3: parent->cost_to_come_ + (parent->point_ - point).norm();
   return parent->cost_to_come_ + best_time +
          (parent->point_ - point).Configuration().norm();
@@ -392,48 +385,56 @@ double TimeVaryingAStar<S, E, B, SB>::ComputeHeuristic(const S& point,
   // This heuristic is the best possible distance + best possible time.
   // option 1: ComputeBestTime(point, stop)
   // option 2 (doesn't work!): ComputeBestTime(point, stop) + (point -
-  // stop).norm()*0.1
+  //                           stop).norm()*0.1
   // option 3: (point - stop).norm();
-  return KinematicPlanner<S, E, B, SB>::dynamics_.BestPossibleTime(point,
-                                                                   stop) +
+  return this->dynamics_.BestPossibleTime(point, stop) +
          (point - stop).Configuration().norm();
 }
 
-/*
-// Computes the best possible time by looking at the largest coordinate diff.
+// Helper function to find all neighboring nodes from the specified dimension
+// to the final dimension.
 template <typename S, typename E, typename B, typename SB>
-double TimeVaryingAStar<S, E, B, SB>::ComputeBestTime(const S& point,
-    const S& stop) const {
-  S diff = (point - stop).cwiseAbs();
-  double max_diff = std::max(diff[0], std::max(diff[1], diff[2]));
-  return max_diff/max_speed_;
-}
-*/
+std::list<VectorXd> TimeVaryingAStar<S, E, B, SB>::FindNeighborsFromDimension(
+    const VectorXd& config, size_t dimension) const {
+  std::list<VectorXd> neighbors;
 
-// Helper function populating the neighbors of a given point in all dimension.
-// TODO: Implement this!
-template <typename S, typename E, typename B, typename SB>
-std::vector<S> TimeVaryingAStar<S, E, B, SB>::NeighborsFinder(
-    const S& point, const VectorXd& neighbor, size_t dimension) const {
-  throw std::runtime_error("NeighborsFinder not implemented yet!");
+  // Catch base case.
+  if (dimension == config.size()) {
+    neighbors.emplace_back(config);
+  } else {
+    // For each possible value in the current dimension, populate lists of
+    // neighbors in the next dimension (recursively) and concatenate.
+    for (double value = config[dimension] - grid_resolution_;
+         value <= config[dimension] + grid_resolution_ + 1e-4;
+         value += grid_resolution_) {
+      VectorXd next_config = config;
+      next_config[dimension] = value;
+
+      neighbors.splice(neighbors.end(),
+                       FindNeighborsFromDimension(next_config, dimension + 1));
+    }
+  }
+
+  return neighbors;
 }
 
 // Get the neighbors of the given point on the implicit grid.
 // NOTE! Include the given point.
 template <typename S, typename E, typename B, typename SB>
-std::vector<S> TimeVaryingAStar<S, E, B, SB>::Neighbors(const S& point) const {
-  VectorXd config = point.Configuration();
-  int dimension = config.size();
-  VectorXd new_config = point.Configuration();
-  return NeighborsFinder(point, new_config, dimension - 1);
+std::list<VectorXd> TimeVaryingAStar<S, E, B, SB>::Neighbors(
+    const S& point) const {
+  const VectorXd config = point.Configuration();
+  return FindNeighborsFromDimension(config, 0);
 }
 
 // Collision check a line segment between the two points with the given
 // initial start time. Returns true if the path is collision free and
 // false otherwise.
 template <typename S, typename E, typename B, typename SB>
-bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(
-    const S& start, const S& stop, double start_time, double stop_time) const {
+bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
+                                                   const S& stop,
+                                                   double start_time,
+                                                   double stop_time) const {
   // Unpack configurations.
   const VectorXd start_config = start.Configuration();
   const VectorXd stop_config = stop.Configuration();
@@ -441,13 +442,12 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(
   // Need to check if collision checking identical configurations at different
   // times. In this case, we will have to avoid divide by zero issues in
   // computing the unit direction from start to stop.
-  const bool same_pt =
-      start_config.isApprox(stop_config, 1e-8);
+  const bool same_pt = start_config.isApprox(stop_config, 1e-8);
 
   // Compute the unit vector pointing from start to stop.
-  const VectorXd direction =
-      (same_pt) ? VectorXd::Zero(S::ConfigurationDimension())
-                : (stop_config - start_config).normalized();
+  const VectorXd direction = (same_pt)
+                                 ? VectorXd::Zero(S::ConfigurationDimension())
+                                 : (stop_config - start_config).normalized();
 
   // Compute the dt between query points.
   constexpr double kStayPutIntervalCollisionCheckFraction = 0.1;
@@ -499,13 +499,11 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
   // Start with an empty list of positions and times.
   std::vector<S> positions;
   std::vector<double> times;
-  std::vector<double> collision_probs;
 
   // Populate these lists by walking backward, then reverse.
   for (typename Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
     positions.push_back(n->point_);
     times.push_back(n->time_);
-    collision_probs.push_back(n->collision_prob_);
   }
 
   std::reverse(positions.begin(), positions.end());
