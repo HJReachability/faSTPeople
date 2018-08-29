@@ -25,12 +25,12 @@
     </include>
   </group>
 
-  <!-- ========================== Robot 2. ========================== -->
+  <!-- ========================== Robot 2. ========================== 
   <group ns="$(arg robot2)">
     <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
       <arg name="suffix" value="$(arg robot2)" />
       <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
       <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
     </include>
-  </group>
+  </group> -->
 </launch>
