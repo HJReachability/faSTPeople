@@ -6,6 +6,7 @@
   <arg name="other_traj_topics" default="[]" />
   <arg name="updated_env_topic" default="/updated_env" />
   <arg name="vis_topic" default="/vis/known_env" />
+  <arg name="other_occupancy_grid_topics" default="[]" />
 
   <!-- Services. -->
   <arg name="other_bound_srvs" default="[]" />
@@ -14,7 +15,7 @@
   <arg name="dynamics_srv" default="/planner_dynamics" />
 
   <!-- Probabilistic planning params. -->
-  <arg name="prob_thresh" default="0.1" />
+  <arg name="collision_threshold" default="0.1" />
   <arg name="collision_check_resolution" default="0.33" />
   <arg name="grid_resolution" default="0.33" />
 
@@ -37,20 +38,21 @@
   <arg name="env_lower_y" default="10.0" />
   <arg name="env_lower_z" default="0.0" />
 
-  <!-- OMPL kinematic planner node.  -->
+  <!-- Planner node.  -->
   <node name="planner"
         pkg="fastpeople"
         type="time_varying_astar_node"
         output="screen">
     <param name="topic/sensor_sub" value="$(arg sensor_sub_topic)" />
-    <param name="topic/other_trajs" value="$(arg other_traj_topics)" />
+    <rosparam param="topic/other_trajs" subst_value="True">$(arg other_traj_topics)</rosparam>
+    <rosparam param="topic/other_occupancy_grids" subst_value="True">$(arg other_occupancy_grid_topics)</rosparam>
     <param name="topic/updated_env" value="$(arg updated_env_topic)" />
     <param name="vis/env" value="$(arg vis_topic)" />
 
     <param name="srv/replan" value="$(arg replan_srv)" />
     <param name="srv/dynamics" value="$(arg dynamics_srv)" />
     <param name="srv/bound" value="$(arg bound_srv)" />
-    <param name="srv/other_bounds" value="$(arg other_bound_srvs)" />
+    <rosparam param="srv/other_bounds" subst_value="True">$(arg other_bound_srvs)</rosparam>
 
     <param name="max_runtime" value="$(arg max_runtime)" />
 
@@ -66,7 +68,7 @@
     <param name="env/lower/y" value="$(arg env_lower_y)" />
     <param name="env/lower/z" value="$(arg env_lower_z)" />
 
-    <param name="prob_thresh" value="$(arg prob_thresh)" />
+    <param name="collision_threshold" value="$(arg collision_threshold)" />
     <param name="collision_check_resolution" value="$(arg collision_check_resolution)" />
     <param name="grid_resolution" value="$(arg grid_resolution)" />
   </node>

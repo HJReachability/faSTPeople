@@ -72,7 +72,7 @@ class STPeopleEnvironment
     : public Environment<crazyflie_human::OccupancyGridTime, Empty> {
  public:
   ~STPeopleEnvironment() {}
-  explicit STPeopleEnvironment() : Environment() {}
+  explicit STPeopleEnvironment() : Environment<crazyflie_human::OccupancyGridTime, Empty>() {}
 
   // Derived classes must provide a collision checker which returns true if
   // and only if the provided position is a valid collision-free configuration.
@@ -201,17 +201,23 @@ void STPeopleEnvironment<S>::Visualize() const {
 // Load parameters. This should still call Environment::LoadParameters.
 template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
+  if (!Environment<crazyflie_human::OccupancyGridTime, Empty>::LoadParameters(n)) {
+    ROS_WARN("%s: Base class Environment could not load parameters.", 
+	name_.c_str());
+    return false;
+  }
+
   ros::NodeHandle nl(n);
-  name_ = ros::names::append(n.getNamespace(), "STPeopleEnvironment");
 
-  // Service for loading bound.
-  std::vector<std::string> other_bound_srvs_name;
-
+  // Load other traj/occupancy grid topics and collision probability threshold.
   if (!nl.getParam("topic/other_trajs", traj_topics_)) return false;
   if (!nl.getParam("topic/other_occupancy_grids", occupancy_grid_topics_))
     return false;
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
-  if (!nl.getParam("other_bound_srvs", other_bound_srvs_name)) return false;
+
+  // Services for loading other tracking error bounds.
+  std::vector<std::string> other_bound_srvs_name;
+  if (!nl.getParam("srv/other_bounds", other_bound_srvs_name)) return false;
 
   // Load all the TEBs for the higher-priority robots.
   for (size_t ii = 0; ii < other_bound_srvs_name.size(); ii++) {
@@ -234,7 +240,7 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
     bound_registry_.emplace(traj_topics_[ii], bound);
   }
 
-  return Environment::LoadParameters(n);
+  return true;
 }
 
 // Register callbacks. This should still call Environment::RegisterCallbacks.
@@ -278,6 +284,8 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
     traj_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
         topic, 1, boost::bind(callback, _1, topic)));
   }
+
+  return true;
 }
 
 // Base class sensor callback. Not implemented in favor of custom callbacks
