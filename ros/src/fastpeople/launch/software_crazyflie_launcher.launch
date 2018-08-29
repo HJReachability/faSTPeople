@@ -2,7 +2,7 @@
 
 <launch>
   <!-- Suffix to append to all topic and service names. -->
-  <arg name="suffix" default=":1" />
+  <arg name="suffix" default="1" />
 
   <!-- Probabilistic planning params. -->
   <arg name="prob_thresh" default="0.1" />
