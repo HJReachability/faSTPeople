@@ -279,7 +279,7 @@
     <param name="hover/z" value="$(arg takeoff_hover_z)" />
   </node>
 
-  <!-- Takeoff server node. -->
+  <!-- Takeoff control filter node. -->
   <node name="takeoff_control_filter"
         pkg="crazyflie_takeoff"
         type="takeoff_control_filter_node"
