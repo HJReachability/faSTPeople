@@ -36,5 +36,6 @@ This repository is set up so that code must be _reviewed_ by someone with write 
     git pull origin master
     git checkout <your-git-id>/<feature-name>
     git rebase origin/master
+    git push --force origin <your-git-id>/<feature-name>
     ```
 4. Now you're ready to open a PR. Go to the [web interface](https://github.com/HJReachability/faSTPeople) for this repository, find your branch, and open a PR. Write up a short description of your feature, add any release notes you want, and add reviewers. Once they approve your PR you can merge.
