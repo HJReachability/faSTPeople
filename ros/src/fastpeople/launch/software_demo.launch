@@ -13,12 +13,20 @@
   <arg name="collision_check_resolution" default="0.33" />
   <arg name="grid_resolution" default="0.33" />
 
+  <!-- Hardware interfaces. -->
+  <arg name="joy_dev" default="/dev/input/js0" />
+
   <!-- Record a rosbag. -->
   <node pkg="rosbag"
 	      type="record"
 	      name="recorder"
 	      args="-a -o $(fastpeople)/bagfiles/sw_demo_recording.bag"
 	      if="$(arg record)">
+  </node>
+
+  <!-- Joystick (XBox controller) publisher node. -->
+  <node name="joy" pkg="joy" type="joy_node" output="screen">
+    <param name="dev" value="$(arg joy_dev)" />
   </node>
 
   <!-- ========================== Robot 1. ========================== -->
