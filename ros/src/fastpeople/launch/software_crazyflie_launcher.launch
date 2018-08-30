@@ -56,12 +56,12 @@
   <!-- Goal point. -->
   <arg name="goal_x" default="-0.25" /> <!-- before: 1.0, -0.56, 1.0 -->
   <arg name="goal_y" default="1.5" /> <!-- -0.76 -->
-  <arg name="goal_z" default="1.0" /> 
+  <arg name="goal_z" default="1.0" />
 
-  <!-- Simulator params. -->  
+  <!-- Simulator params. -->
   <arg name="takeoff_hover_x" default="1.00" /> <!-- before: -0.25, 1.5, 1.0 --> <!-- -0.25 -->
   <arg name="takeoff_hover_y" default="-0.56" />   <!-- 1.5 -->
-  <arg name="takeoff_hover_z" default="1.0" /> 
+  <arg name="takeoff_hover_z" default="1.0" />
   <arg name="sim_init_x" default="$(arg takeoff_hover_x)" />
   <arg name="sim_init_y" default="$(arg takeoff_hover_y)" />
   <arg name="sim_init_z" default="0.0" />
@@ -86,7 +86,7 @@
   <arg name="lqr_x_dim" default="7" />
   <arg name="lqr_u_dim" default="4" />
 
-  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_poor.txt" />
+  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_manual.txt" />
   <arg name="lqr_u_ref_file" default="$(find crazyflie_lqr)/references/u_ref_hover.txt" />
 
   <!-- Environment parameters and state space bounds. -->
