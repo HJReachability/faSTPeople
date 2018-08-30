@@ -182,7 +182,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
 
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
-    const double integrated_prob = 
+    const double integrated_prob =
       interpolator.OccupancyProbability(position, bound, time);
     noisyOR_complement *= 1.0 - integrated_prob;
     if (1.0 - noisyOR_complement > collision_threshold_)
@@ -202,7 +202,7 @@ void STPeopleEnvironment<S>::Visualize() const {
 template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
   if (!Environment<crazyflie_human::OccupancyGridTime, Empty>::LoadParameters(n)) {
-    ROS_WARN("%s: Base class Environment could not load parameters.", 
+    ROS_WARN("%s: Base class Environment could not load parameters.",
 	name_.c_str());
     return false;
   }
@@ -310,6 +310,9 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
     // We've already seen this topic, so just update the recorded trajectory.
     iter->second = Trajectory<S>(msg);
   }
+
+  // Let the system know this environment has been updated.
+  this->updated_pub_.publish(std_msgs::Empty());
 }
 
 // Generic callback to handle a new occupancy grid msg on the given topic.
@@ -330,6 +333,9 @@ void STPeopleEnvironment<S>::OccupancyGridCallback(
       topic,
       OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
                                     this->lower_(1), this->upper_(1)));
+
+  // Let the system know this environment has been updated.
+  this->updated_pub_.publish(std_msgs::Empty());
 }
 
 }  //\namespace environment
