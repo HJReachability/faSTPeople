@@ -41,6 +41,8 @@
   <arg name="junk_updated_env_topic" default="/junk/updated_env$(arg suffix)" />
 
   <!-- Services. -->
+  <arg name="takeoff_srv" default="/takeoff$(arg suffix)" />
+  <arg name="land_srv" default="/land$(arg suffix)" />
   <arg name="replan_srv" default="/replan$(arg suffix)" />
   <arg name="bound_srv" default="/bound$(arg suffix)" />
   <arg name="planner_dynamics_srv" default="/planner_dynamics$(arg suffix)" />
@@ -54,12 +56,12 @@
   <!-- Goal point. -->
   <arg name="goal_x" default="-0.25" /> <!-- before: 1.0, -0.56, 1.0 -->
   <arg name="goal_y" default="1.5" /> <!-- -0.76 -->
-  <arg name="goal_z" default="1.0" /> 
+  <arg name="goal_z" default="1.0" />
 
-  <!-- Simulator params. -->  
+  <!-- Simulator params. -->
   <arg name="takeoff_hover_x" default="1.00" /> <!-- before: -0.25, 1.5, 1.0 --> <!-- -0.25 -->
   <arg name="takeoff_hover_y" default="-0.56" />   <!-- 1.5 -->
-  <arg name="takeoff_hover_z" default="1.0" /> 
+  <arg name="takeoff_hover_z" default="1.0" />
   <arg name="sim_init_x" default="$(arg takeoff_hover_x)" />
   <arg name="sim_init_y" default="$(arg takeoff_hover_y)" />
   <arg name="sim_init_z" default="0.0" />
@@ -84,7 +86,7 @@
   <arg name="lqr_x_dim" default="7" />
   <arg name="lqr_u_dim" default="4" />
 
-  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_poor.txt" />
+  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_manual.txt" />
   <arg name="lqr_u_ref_file" default="$(find crazyflie_lqr)/references/u_ref_hover.txt" />
 
   <!-- Environment parameters and state space bounds. -->
@@ -278,6 +280,9 @@
     <param name="topics/reference" value="$(arg reference_state_topic)" />
     <param name="topics/control" value="$(arg takeoff_control_topic)" />
     <param name="topics/in_flight" value="$(arg in_flight_topic)" />
+
+    <param name="srv/takeoff" value="$(arg takeoff_srv)" />
+    <param name="srv/land" value="$(arg land_srv)" />
 
     <param name="hover/x" value="$(arg takeoff_hover_x)" />
     <param name="hover/y" value="$(arg takeoff_hover_y)" />
