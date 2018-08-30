@@ -38,7 +38,8 @@
   <arg name="env_lower_y" default="10.0" />
   <arg name="env_lower_z" default="0.0" />
 
-  <!-- Planner node.  -->
+  <!-- Planner node.  (Optional GMON profiling.) -->
+  <env name="GMON_OUT_PREFIX" value="planner" />
   <node name="planner"
         pkg="fastpeople"
         type="time_varying_astar_node"

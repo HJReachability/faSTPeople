@@ -45,6 +45,11 @@ catkin_package(
     BOOST
 )
 
+### FOR PROFILING (need to set after catkin_package)
+add_compile_options(-pg)
+set(catkin_LIBRARIES ${catkin_LIBRARIES} -pg)
+###
+
 option(ENABLE_DEBUG_MESSAGES "Turn on to enable bound checking and debug messages" ON)
 if(ENABLE_DEBUG_MESSAGES)
   add_definitions(-DENABLE_DEBUG_MESSAGES=1)
