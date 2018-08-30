@@ -94,7 +94,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   // If 'hi' is not a valid iterator, then just return what we have.
   if (hi == occupancy_grids_.end()) {
-    ROS_WARN("OccupancyGridTimeInterpolator: interpolation time is too late.");
+    ROS_WARN_THROTTLE(2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
     return lo_prob;
   }
 
@@ -133,7 +133,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   // If 'hi' is not a valid iterator, then just return what we have.
   if (hi == occupancy_grids_.end()) {
-    ROS_WARN("OccupancyGridTimeInterpolator: interpolation time is too late.");
+    ROS_WARN_THROTTLE(2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
     return lo_prob;
   }
 

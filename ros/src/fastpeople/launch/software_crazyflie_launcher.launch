@@ -52,17 +52,16 @@
   <arg name="planner_frame" default="planner$(arg suffix)" />
 
   <!-- Goal point. -->
-  <arg name="goal_x" default="8.0" />
-  <arg name="goal_y" default="8.0" />
-  <arg name="goal_z" default="8.0" />
+  <arg name="goal_x" default="-0.25" /> <!-- before: 1.0, -0.56, 1.0 -->
+  <arg name="goal_y" default="1.5" /> <!-- -0.76 -->
+  <arg name="goal_z" default="1.0" /> 
 
-  <!-- Simulator params. -->
-  <arg name="takeoff_hover_x" default="0.0" />
-  <arg name="takeoff_hover_y" default="0.0" />
-  <arg name="takeoff_hover_z" default="2.0" />
-
-  <arg name="sim_init_x" default="0.0" />
-  <arg name="sim_init_y" default="0.0" />
+  <!-- Simulator params. -->  
+  <arg name="takeoff_hover_x" default="1.00" /> <!-- before: -0.25, 1.5, 1.0 --> <!-- -0.25 -->
+  <arg name="takeoff_hover_y" default="-0.56" />   <!-- 1.5 -->
+  <arg name="takeoff_hover_z" default="1.0" /> 
+  <arg name="sim_init_x" default="$(arg takeoff_hover_x)" />
+  <arg name="sim_init_y" default="$(arg takeoff_hover_y)" />
   <arg name="sim_init_z" default="0.0" />
 
   <!-- Planner params. -->
@@ -89,18 +88,17 @@
   <arg name="lqr_u_ref_file" default="$(find crazyflie_lqr)/references/u_ref_hover.txt" />
 
   <!-- Environment parameters and state space bounds. -->
-  <arg name="env_max" default="10.0" />
   <arg name="vel_max" default="10.0" />
-  <arg name="state_upper" default="[$(arg env_max), $(arg env_max), $(arg env_max),
-                                   $(arg vel_max), $(arg vel_max), $(arg vel_max)]" />
-  <arg name="state_lower" default="[-$(arg env_max), -$(arg env_max), 0.0,
-                                   -$(arg vel_max), -$(arg vel_max), -$(arg vel_max)]" />
-  <arg name="env_upper_x" default="$(arg env_max)" />
-  <arg name="env_upper_y" default="$(arg env_max)" />
-  <arg name="env_upper_z" default="$(arg env_max)" />
-  <arg name="env_lower_x" default="-$(arg env_max)" />
-  <arg name="env_lower_y" default="-$(arg env_max)" />
+  <arg name="env_upper_x" default="1.66" />
+  <arg name="env_upper_y" default="2.62" />
+  <arg name="env_upper_z" default="2.0" />
+  <arg name="env_lower_x" default="-2.0" />
+  <arg name="env_lower_y" default="-1.04" />
   <arg name="env_lower_z" default="0.0" />
+  <arg name="state_upper" default="[$(arg env_upper_x), $(arg env_upper_y), $(arg env_upper_z),
+                                   $(arg vel_max), $(arg vel_max), $(arg vel_max)]" />
+  <arg name="state_lower" default="[$(arg env_lower_x), $(arg env_lower_y), $(arg env_lower_z),
+                                   -$(arg vel_max), -$(arg vel_max), -$(arg vel_max)]" />
 
   <!-- ========================== FaSTrack. ========================== -->
   <!-- Tracker. -->
