@@ -185,7 +185,7 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     const double integrated_prob = 
       interpolator.OccupancyProbability(position, bound, time);
     noisyOR_complement *= 1.0 - integrated_prob;
-    if (noisyOR_complement > collision_threshold_)
+    if (1.0 - noisyOR_complement > collision_threshold_)
       return false;
   }
 
