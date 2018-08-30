@@ -22,15 +22,31 @@
       <arg name="suffix" value="$(arg robot1)" />
       <arg name="other_traj_topics" value="[]" />
       <arg name="other_bound_srvs" value="[]" />
+
+      <arg name="takeoff_hover_x" default="0.0" />
+      <arg name="takeoff_hover_y" default="1.0" />
+      <arg name="takeoff_hover_z" default="2.0" />
+
+      <arg name="sim_init_x" default="0.0" />
+      <arg name="sim_init_y" default="1.0" />
+      <arg name="sim_init_z" default="0.0" />
     </include>
   </group>
 
-  <!-- ========================== Robot 2. ========================== 
+  <!-- ========================== Robot 2. ==========================
   <group ns="$(arg robot2)">
     <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
       <arg name="suffix" value="$(arg robot2)" />
       <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
       <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
+
+      <arg name="takeoff_hover_x" default="0.0" />
+      <arg name="takeoff_hover_y" default="-1.0" />
+      <arg name="takeoff_hover_z" default="2.0" />
+
+      <arg name="sim_init_x" default="0.0" />
+      <arg name="sim_init_y" default="-1.0" />
+      <arg name="sim_init_z" default="0.0" />
     </include>
   </group> -->
 </launch>

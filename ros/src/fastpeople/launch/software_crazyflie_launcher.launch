@@ -41,6 +41,8 @@
   <arg name="junk_updated_env_topic" default="/junk/updated_env$(arg suffix)" />
 
   <!-- Services. -->
+  <arg name="takeoff_srv" default="/takeoff$(arg suffix)" />
+  <arg name="land_srv" default="/land$(arg suffix)" />
   <arg name="replan_srv" default="/replan$(arg suffix)" />
   <arg name="bound_srv" default="/bound$(arg suffix)" />
   <arg name="planner_dynamics_srv" default="/planner_dynamics$(arg suffix)" />
@@ -278,6 +280,9 @@
     <param name="topics/reference" value="$(arg reference_state_topic)" />
     <param name="topics/control" value="$(arg takeoff_control_topic)" />
     <param name="topics/in_flight" value="$(arg in_flight_topic)" />
+
+    <param name="srv/takeoff" value="$(arg takeoff_srv)" />
+    <param name="srv/land" value="$(arg land_srv)" />
 
     <param name="hover/x" value="$(arg takeoff_hover_x)" />
     <param name="hover/y" value="$(arg takeoff_hover_y)" />
