@@ -241,8 +241,15 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
   // Main loop - repeatedly expand the top priority node and
   // insert neighbors that are not already in the closed list.
   while (true) {
+    // Check if we have run out of planning time. 
+    if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
+      ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
+      return Trajectory<S>();
+    }
+
+    // Checking open list size.
     if (open.size() != open_registry.size()) {
-      throw std::runtime_error("open and open_registry are not the same size!");
+      throw std::runtime_error("Open and open_registry are not the same size!");
     }
 
     if (open.empty()) {
@@ -260,7 +267,8 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     // Check if this guy is the goal.
     const double dist = (next->point_ - end).Configuration().norm();
 
-    if (dist < grid_resolution_ * 0.5) {
+    constexpr double kHalfSquareRootThree = 0.5 * std::sqrt(3.0);
+    if (dist <= grid_resolution_ * kHalfSquareRootThree) {
       const typename Node::ConstPtr parent_node =
           (next->parent_ == nullptr) ? next : next->parent_;
 
@@ -274,6 +282,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
       const typename Node::Ptr terminus = Node::Create(
           end, parent_node, terminus_time, terminus_cost, terminus_heuristic);
+
       return GenerateTrajectory(terminus);
     }
 

@@ -23,7 +23,7 @@
   <arg name="fixed_frame" default="world" />
 
   <!-- Maximum planning runtime (sec). -->
-  <arg name="max_runtime" default="0.5" />
+  <arg name="max_runtime" default="0.09" />
 
   <!-- State space bounds [x, y, z, vx, vy, vz].
        NOTE! These should agree with the upper and lower environment bounds. -->
