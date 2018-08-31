@@ -41,6 +41,8 @@
   <arg name="junk_updated_env_topic" default="/junk/updated_env$(arg suffix)" />
 
   <!-- Services. -->
+  <arg name="takeoff_srv" default="/takeoff$(arg suffix)" />
+  <arg name="land_srv" default="/land$(arg suffix)" />
   <arg name="replan_srv" default="/replan$(arg suffix)" />
   <arg name="bound_srv" default="/bound$(arg suffix)" />
   <arg name="planner_dynamics_srv" default="/planner_dynamics$(arg suffix)" />
@@ -52,17 +54,16 @@
   <arg name="planner_frame" default="planner$(arg suffix)" />
 
   <!-- Goal point. -->
-  <arg name="goal_x" default="8.0" />
-  <arg name="goal_y" default="8.0" />
-  <arg name="goal_z" default="8.0" />
+  <arg name="goal_x" default="-0.25" /> <!-- before: 1.0, -0.56, 1.0 -->
+  <arg name="goal_y" default="1.5" /> <!-- -0.76 -->
+  <arg name="goal_z" default="1.0" />
 
   <!-- Simulator params. -->
-  <arg name="takeoff_hover_x" default="0.0" />
-  <arg name="takeoff_hover_y" default="0.0" />
-  <arg name="takeoff_hover_z" default="2.0" />
-
-  <arg name="sim_init_x" default="0.0" />
-  <arg name="sim_init_y" default="0.0" />
+  <arg name="takeoff_hover_x" default="1.00" /> <!-- before: -0.25, 1.5, 1.0 --> <!-- -0.25 -->
+  <arg name="takeoff_hover_y" default="-0.56" />   <!-- 1.5 -->
+  <arg name="takeoff_hover_z" default="1.0" />
+  <arg name="sim_init_x" default="$(arg takeoff_hover_x)" />
+  <arg name="sim_init_y" default="$(arg takeoff_hover_y)" />
   <arg name="sim_init_z" default="0.0" />
 
   <!-- Planner params. -->
@@ -85,22 +86,21 @@
   <arg name="lqr_x_dim" default="7" />
   <arg name="lqr_u_dim" default="4" />
 
-  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_poor.txt" />
+  <arg name="lqr_K_file" default="$(find crazyflie_lqr)/references/K_manual.txt" />
   <arg name="lqr_u_ref_file" default="$(find crazyflie_lqr)/references/u_ref_hover.txt" />
 
   <!-- Environment parameters and state space bounds. -->
-  <arg name="env_max" default="10.0" />
   <arg name="vel_max" default="10.0" />
-  <arg name="state_upper" default="[$(arg env_max), $(arg env_max), $(arg env_max),
-                                   $(arg vel_max), $(arg vel_max), $(arg vel_max)]" />
-  <arg name="state_lower" default="[-$(arg env_max), -$(arg env_max), 0.0,
-                                   -$(arg vel_max), -$(arg vel_max), -$(arg vel_max)]" />
-  <arg name="env_upper_x" default="$(arg env_max)" />
-  <arg name="env_upper_y" default="$(arg env_max)" />
-  <arg name="env_upper_z" default="$(arg env_max)" />
-  <arg name="env_lower_x" default="-$(arg env_max)" />
-  <arg name="env_lower_y" default="-$(arg env_max)" />
+  <arg name="env_upper_x" default="1.66" />
+  <arg name="env_upper_y" default="2.62" />
+  <arg name="env_upper_z" default="2.0" />
+  <arg name="env_lower_x" default="-2.0" />
+  <arg name="env_lower_y" default="-1.04" />
   <arg name="env_lower_z" default="0.0" />
+  <arg name="state_upper" default="[$(arg env_upper_x), $(arg env_upper_y), $(arg env_upper_z),
+                                   $(arg vel_max), $(arg vel_max), $(arg vel_max)]" />
+  <arg name="state_lower" default="[$(arg env_lower_x), $(arg env_lower_y), $(arg env_lower_z),
+                                   -$(arg vel_max), -$(arg vel_max), -$(arg vel_max)]" />
 
   <!-- ========================== FaSTrack. ========================== -->
   <!-- Tracker. -->
@@ -149,6 +149,7 @@
     <arg name="ready_topic" value="$(arg in_flight_topic)" />
     <arg name="traj_topic" value="$(arg traj_topic)" />
     <arg name="replan_request_topic" value="$(arg replan_request_topic)" />
+    <arg name="updated_env_topic" value="$(arg updated_env_topic)" />
     <arg name="ref_topic" value="$(arg fastrack_reference_state_topic)" />
     <arg name="traj_vis" value="$(arg traj_vis_topic)" />
     <arg name="bound_vis" value="$(arg bound_vis_topic)" />
@@ -280,6 +281,9 @@
     <param name="topics/reference" value="$(arg reference_state_topic)" />
     <param name="topics/control" value="$(arg takeoff_control_topic)" />
     <param name="topics/in_flight" value="$(arg in_flight_topic)" />
+
+    <param name="srv/takeoff" value="$(arg takeoff_srv)" />
+    <param name="srv/land" value="$(arg land_srv)" />
 
     <param name="hover/x" value="$(arg takeoff_hover_x)" />
     <param name="hover/y" value="$(arg takeoff_hover_y)" />

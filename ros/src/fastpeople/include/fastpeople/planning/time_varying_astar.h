@@ -252,12 +252,6 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
     const typename Node::Ptr next = *open.begin();
 
-    // TODO this is for debugging!
-    // next->PrintNode(start_time);
-
-    ROS_INFO("%s: Open list size: %zu, Next priority: %f", this->name_.c_str(),
-             open.size(), next->priority_);
-
     // Pop the next node from the open_registry and open set.
     open_registry.erase(
         next);  // works because keys in open_registry are unique!
@@ -314,22 +308,13 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
           Node::Create(neighbor_state, next, neighbor_time, neighbor_cost,
                        neighbor_heuristic);
       if (closed_registry.count(neighbor_node) > 0) {
-        // neighbor_node->PrintNode(start_time);
-        ROS_WARN(
-            "Did not add neighbor_node because its already on the closed "
-            "list.");
         continue;
       }
 
       // Collision check this line segment (and store the collision probability)
       if (!CollisionCheck(next->point_, neighbor_state, next->time_, neighbor_time)) {
-        // neighbor_node->PrintNode(start_time);
-        ROS_WARN("Did not add neighbor_node because its in collision!");
         continue;
       }
-
-      // ROS_INFO("Adding neighbor node...");
-      // neighbor_node->PrintNode(start_time);
 
       // Check if we're in the open set.
       auto match = open_registry.find(neighbor_node);
@@ -531,4 +516,5 @@ bool TimeVaryingAStar<S, E, B, SB>::LoadParameters(const ros::NodeHandle& n) {
 }
 }  //\namespace planning
 }  //\namespace fastrack
+
 #endif
