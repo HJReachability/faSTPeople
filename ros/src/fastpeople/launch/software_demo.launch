@@ -2,8 +2,8 @@
 
 <launch>
   <!-- Robot suffixes. -->
-  <arg name="robot1" default="HY1" />
-  <arg name="robot2" default="HY2" />
+  <arg name="robot1" default="HY4" />
+  <arg name="robot2" default="HY5" />
 
   <!-- Record? -->
   <arg name="record" default="false" />
