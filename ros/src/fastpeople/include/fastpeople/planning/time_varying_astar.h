@@ -260,7 +260,8 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     // Check if this guy is the goal.
     const double dist = (next->point_ - end).Configuration().norm();
 
-    if (dist < grid_resolution_ * 0.5) {
+    constexpr double kHalfSquareRootThree = 0.5 * std::sqrt(3.0);
+    if (dist <= grid_resolution_ * kHalfSquareRootThree) {
       const typename Node::ConstPtr parent_node =
           (next->parent_ == nullptr) ? next : next->parent_;
 
@@ -274,6 +275,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
       const typename Node::Ptr terminus = Node::Create(
           end, parent_node, terminus_time, terminus_cost, terminus_heuristic);
+
       return GenerateTrajectory(terminus);
     }
 
