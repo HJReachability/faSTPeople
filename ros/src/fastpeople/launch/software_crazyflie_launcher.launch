@@ -149,6 +149,7 @@
     <arg name="ready_topic" value="$(arg in_flight_topic)" />
     <arg name="traj_topic" value="$(arg traj_topic)" />
     <arg name="replan_request_topic" value="$(arg replan_request_topic)" />
+    <arg name="updated_env_topic" value="$(arg updated_env_topic)" />
     <arg name="ref_topic" value="$(arg fastrack_reference_state_topic)" />
     <arg name="traj_vis" value="$(arg traj_vis_topic)" />
     <arg name="bound_vis" value="$(arg bound_vis_topic)" />

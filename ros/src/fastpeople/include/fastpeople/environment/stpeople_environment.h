@@ -333,6 +333,7 @@ void STPeopleEnvironment<S>::OccupancyGridCallback(
       topic,
       OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
                                     this->lower_(1), this->upper_(1)));
+
   // Let the system know this environment has been updated.
   this->updated_pub_.publish(std_msgs::Empty());
 }
