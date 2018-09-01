@@ -195,7 +195,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   // Maximum distance between test points on line segments being
   // collision checked.
   double collision_check_resolution_;
-
 };  //\class TimeVaryingAStar
 
 // --------------------------- IMPLEMENTATION ------------------------------- //
@@ -289,6 +288,11 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
                 this->name_.c_str());
         break;
       }
+
+      // Wait until planning time has elapsed before returning.
+      const ros::Duration wait_time(
+        this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
+      wait_time.sleep();
 
       return GenerateTrajectory(terminus);
     }
@@ -439,7 +443,6 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
   // Unpack configurations.
   const VectorXd start_config = start.Configuration();
   const VectorXd stop_config = stop.Configuration();
-  std::cout << "delta time = " << stop_time - start_time << std::endl;
 
   // Need to check if collision checking identical configurations at different
   // times. In this case, we will have to avoid divide by zero issues in
