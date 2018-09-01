@@ -67,6 +67,6 @@
       <arg name="takeoff_hover_x" default="1.00" />
       <arg name="takeoff_hover_y" default="-0.56" />
       <arg name="takeoff_hover_z" default="1.0" />
-    </include>
-  </group> 
+W    </include>
+  </group>
 </launch>
