@@ -23,12 +23,12 @@
       <arg name="other_traj_topics" value="[]" />
       <arg name="other_bound_srvs" value="[]" />
 
-      <arg name="goal_x" default="-0.5" />
-      <arg name="goal_y" default="1.5" />
+      <arg name="goal_x" default="1.3" /> <!-- 1.3 -->
+      <arg name="goal_y" default="1.0" /> <!-- 1.0 -->
       <arg name="goal_z" default="1.0" />
 
-      <arg name="takeoff_hover_x" default="-0.5" />
-      <arg name="takeoff_hover_y" default="-0.56" />
+      <arg name="takeoff_hover_x" default="-0.5" /> 
+      <arg name="takeoff_hover_y" default="0.0" />
       <arg name="takeoff_hover_z" default="1.0" />
     </include>
   </group>
@@ -40,13 +40,13 @@
       <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
       <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
 
-      <arg name="goal_x" default="-0.25" />
-      <arg name="goal_y" default="1.5" />
-      <arg name="goal_z" default="1.3" />
+      <arg name="goal_x" default="-1.0" />
+      <arg name="goal_y" default="1.0" />
+      <arg name="goal_z" default="1.0" />
 
-      <arg name="takeoff_hover_x" default="1.00" />
-      <arg name="takeoff_hover_y" default="-0.56" />
-      <arg name="takeoff_hover_z" default="0.3" />
+      <arg name="takeoff_hover_x" default="0.8" />
+      <arg name="takeoff_hover_y" default="-0.5" />
+      <arg name="takeoff_hover_z" default="1.0" />
     </include>
   </group>
 </launch>

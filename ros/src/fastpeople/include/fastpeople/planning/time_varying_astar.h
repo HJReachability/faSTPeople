@@ -106,8 +106,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
       std::cout << "  cost_to_come: " << cost_to_come_ << std::endl;
       std::cout << "  heuristic: " << heuristic_ << std::endl;
       std::cout << "  priority: " << priority_ << std::endl;
-      if (parent_ != nullptr)
-        std::cout << "  parent id: " << parent_->id_ << std::endl;
     }
 
     // Comparitor. Returns true if heuristic cost of Node 1 < for Node 2.
@@ -290,6 +288,8 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       }
 
       // Wait until planning time has elapsed before returning.
+      ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
+               (ros::Time::now() - plan_start_time).toSec());
       const ros::Duration wait_time(
         this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
       wait_time.sleep();
@@ -331,7 +331,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         continue;
       }
 
-      // Collision check this line segment (and store the collision probability)
+      // Collision check this line segment.
       if (!CollisionCheck(next->point_, neighbor_state, next->time_, neighbor_time)) {
         continue;
       }

@@ -6,8 +6,8 @@
 
   <!-- Probabilistic planning params. -->
   <arg name="collision_threshold" default="0.1" />
-  <arg name="collision_check_resolution" default="0.33" />
-  <arg name="grid_resolution" default="0.33" />
+  <arg name="collision_check_resolution" default="0.1" />
+  <arg name="grid_resolution" default="0.5" />
 
   <!-- Topics. -->
   <arg name="position_velocity_yaw_state_topic" default="/state/position_velocity_yaw$(arg suffix)" />
@@ -67,10 +67,10 @@
   <arg name="sim_init_z" default="0.0" />
 
   <!-- Planner params. -->
-  <arg name="planner_vx" default="0.5" />
-  <arg name="planner_vy" default="0.5" />
-  <arg name="planner_vz" default="0.5" />
-  <arg name="planner_runtime" default="0.5" />
+  <arg name="planner_vx" default="0.3" />
+  <arg name="planner_vy" default="0.3" />
+  <arg name="planner_vz" default="0.3" />
+  <arg name="planner_runtime" default="0.05" />
 
   <!-- Time steps. -->
   <arg name="simulator_dt" default="0.001" />

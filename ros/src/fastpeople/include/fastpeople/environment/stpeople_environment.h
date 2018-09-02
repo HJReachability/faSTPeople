@@ -162,16 +162,15 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
 
     // Interpolate the trajectory in time to find candidate point.
     const S& traj_pt = traj.Interpolate(time);
-
     const Vector3d other_position = traj_pt.Position();
 
     // Check if the TEBs do not intersect.
-    bool collision_free =
+    const bool in_collision =
         (std::abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
         (std::abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
         (std::abs(position(2) - other_position(2)) < (bound.z + teb.z));
 
-    if (!collision_free) return false;
+    if (in_collision) return false;
   }
 
   // Compute the total collision probability with each human and noisyOR
@@ -346,6 +345,7 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
   }
 
   // Let the system know this environment has been updated.
+  ROS_INFO("%s: New traj. Sending updated env signal.", name_.c_str());
   this->updated_pub_.publish(std_msgs::Empty());
 }
 
