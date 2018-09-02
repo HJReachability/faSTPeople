@@ -191,46 +191,6 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
   return true;
 }
 
-// Derived classes must have some sort of visualization through RViz.
-template <typename S>
-void STPeopleEnvironment<S>::Visualize() const {
-  // TODO!
-
-  // Set up box marker.
-  /*visualization_msgs::Marker cube;
-  cube.ns = "cube";
-  cube.header.frame_id = frame_id;
-  cube.header.stamp = ros::Time::now();
-  cube.id = 0;
-  cube.type = visualization_msgs::Marker::CUBE;
-  cube.action = visualization_msgs::Marker::ADD;
-  cube.color.a = 0.5;
-  cube.color.r = 0.3;
-  cube.color.g = 0.7;
-  cube.color.b = 0.7;
-
-  geometry_msgs::Point center;
-
-  // Fill in center and scale.
-  cube.scale.x = upper_(0) - lower_(0);
-  center.x = lower_(0) + 0.5 * cube.scale.x;
-
-  cube.scale.y = upper_(1) - lower_(1);
-  center.y = lower_(1) + 0.5 * cube.scale.y;
-
-  cube.scale.z = upper_(2) - lower_(2);
-  center.z = lower_(2) + 0.5 * cube.scale.z;
-
-  cube.pose.position = center;
-  cube.pose.orientation.x = 0.0;
-  cube.pose.orientation.y = 0.0;
-  cube.pose.orientation.z = 0.0;
-  cube.pose.orientation.w = 1.0;
-
-  // Publish cube marker.
-  pub.publish(cube);*/
-}
-
 // Load parameters. This should still call Environment::LoadParameters.
 template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
@@ -345,7 +305,6 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
   }
 
   // Let the system know this environment has been updated.
-  ROS_INFO("%s: New traj. Sending updated env signal.", name_.c_str());
   this->updated_pub_.publish(std_msgs::Empty());
 }
 
@@ -370,6 +329,44 @@ void STPeopleEnvironment<S>::OccupancyGridCallback(
 
   // Let the system know this environment has been updated.
   this->updated_pub_.publish(std_msgs::Empty());
+}
+
+// Derived classes must have some sort of visualization through RViz.
+template <typename S>
+void STPeopleEnvironment<S>::Visualize() const {
+  // Set up box marker.
+  visualization_msgs::Marker cube;
+  cube.ns = "cube";
+  cube.header.frame_id = frame_id;
+  cube.header.stamp = ros::Time::now();
+  cube.id = 0;
+  cube.type = visualization_msgs::Marker::CUBE;
+  cube.action = visualization_msgs::Marker::ADD;
+  cube.color.a = 0.5;
+  cube.color.r = 0.3;
+  cube.color.g = 0.7;
+  cube.color.b = 0.7;
+
+  geometry_msgs::Point center;
+
+  // Fill in center and scale.
+  cube.scale.x = upper_(0) - lower_(0);
+  center.x = lower_(0) + 0.5 * cube.scale.x;
+
+  cube.scale.y = upper_(1) - lower_(1);
+  center.y = lower_(1) + 0.5 * cube.scale.y;
+
+  cube.scale.z = upper_(2) - lower_(2);
+  center.z = lower_(2) + 0.5 * cube.scale.z;
+
+  cube.pose.position = center;
+  cube.pose.orientation.x = 0.0;
+  cube.pose.orientation.y = 0.0;
+  cube.pose.orientation.z = 0.0;
+  cube.pose.orientation.w = 1.0;
+
+  // Publish cube marker.
+  this->vis_pub_.publish(cube);
 }
 
 }  //\namespace environment
