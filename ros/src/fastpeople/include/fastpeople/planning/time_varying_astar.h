@@ -106,8 +106,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
       std::cout << "  cost_to_come: " << cost_to_come_ << std::endl;
       std::cout << "  heuristic: " << heuristic_ << std::endl;
       std::cout << "  priority: " << priority_ << std::endl;
-      if (parent_ != nullptr)
-        std::cout << "  parent id: " << parent_->id_ << std::endl;
     }
 
     // Comparitor. Returns true if heuristic cost of Node 1 < for Node 2.
@@ -195,7 +193,6 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   // Maximum distance between test points on line segments being
   // collision checked.
   double collision_check_resolution_;
-
 };  //\class TimeVaryingAStar
 
 // --------------------------- IMPLEMENTATION ------------------------------- //
@@ -241,7 +238,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
   // Main loop - repeatedly expand the top priority node and
   // insert neighbors that are not already in the closed list.
   while (true) {
-    // Check if we have run out of planning time. 
+    // Check if we have run out of planning time.
     if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
       ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
       return Trajectory<S>();
@@ -283,6 +280,20 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       const typename Node::Ptr terminus = Node::Create(
           end, parent_node, terminus_time, terminus_cost, terminus_heuristic);
 
+      // Only succeed if final line segment is collision free.
+      if (!CollisionCheck(parent_node->point_, end, parent_node->time_, terminus_time)) {
+        ROS_WARN("%s: Collision check failure adding terminus.",
+                this->name_.c_str());
+        break;
+      }
+
+      // Wait until planning time has elapsed before returning.
+      ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
+               (ros::Time::now() - plan_start_time).toSec());
+      const ros::Duration wait_time(
+        this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
+      wait_time.sleep();
+
       return GenerateTrajectory(terminus);
     }
 
@@ -320,7 +331,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         continue;
       }
 
-      // Collision check this line segment (and store the collision probability)
+      // Collision check this line segment.
       if (!CollisionCheck(next->point_, neighbor_state, next->time_, neighbor_time)) {
         continue;
       }
@@ -438,23 +449,22 @@ bool TimeVaryingAStar<S, E, B, SB>::CollisionCheck(const S& start,
   // computing the unit direction from start to stop.
   const bool same_pt = start_config.isApprox(stop_config, 1e-8);
 
-  // Compute the unit vector pointing from start to stop.
-  const VectorXd direction = (same_pt)
-                                 ? VectorXd::Zero(S::ConfigurationDimension())
-                                 : (stop_config - start_config).normalized();
+  // Compute the vector pointing from start to stop, whose norm is the speed.
+  constexpr double kSmallNumber = 1e-8;
+  const VectorXd velocity =
+    (stop_config - start_config) / std::max(kSmallNumber, stop_time - start_time);
 
   // Compute the dt between query points.
   constexpr double kStayPutIntervalCollisionCheckFraction = 0.1;
   const double dt =
       (same_pt)
           ? (stop_time - start_time) * kStayPutIntervalCollisionCheckFraction
-          : (stop_time - start_time) * collision_check_resolution_ /
-                (stop_config - start_config).norm();
+    : collision_check_resolution_ / velocity.norm();
 
   // Start at the start point and walk until we get past the stop point.
-  for (double time = start_time; time < stop_time; time += dt) {
-    const Vector3d query = S(start_config + direction * dt).Position();
-    if (!this->env_.IsValid(query, this->bound_, time)) return false;
+  for (double time_offset = 0.0; time_offset < stop_time - start_time; time_offset += dt) {
+    const Vector3d query = S(start_config + velocity * time_offset).Position();
+    if (!this->env_.IsValid(query, this->bound_, start_time + time_offset)) return false;
   }
 
   return true;

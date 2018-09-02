@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <!-- Robot suffixes. -->
+  <arg name="robot1" default="HY4" />
+  <arg name="robot2" default="HY5" />
+
+  <!-- Crazyflie address. -->
+  <arg name="HY0" value="radio://0/0/2M/FA57CF2018" />
+  <arg name="HY1" value="radio://0/1/2M/FA57CF2018" />
+  <arg name="HY2" value="radio://0/2/2M/FA57CF2018" />
+  <arg name="HY3" value="radio://0/3/2M/FA57CF2018" />
+  <arg name="HY4" value="radio://0/4/2M/FA57CF2018" />
+  <arg name="HY5" value="radio://0/5/2M/FA57CF2018" />
+  <arg name="HY6" value="radio://0/6/2M/FA57CF2018" />
+  <arg name="HY7" value="radio://0/7/2M/FA57CF2018" />
+
+  <!-- Robot uris. -->
+  <arg name="uri1" default="$(arg HY4)" />
+  <arg name="uri2" default="$(arg HY5)" />
+
+  <!-- Record? -->
+  <arg name="record" default="false" />
+
+  <!-- Record a rosbag. -->
+  <node pkg="rosbag"
+      	type="record"
+      	name="recorder"
+      	args="-a -o $(find fastpeople)/bagfiles/sw_demo_recording.bag"
+      	if="$(arg record)">
+  </node>
+
+  <!-- Crazyflie interface. -->
+  <include file="$(find crazyflie_driver)/launch/crazyflie_server.launch" />
+
+  <!-- ========================== Robot 1. ========================== -->
+  <group ns="$(arg robot1)">
+    <include file="$(find fastpeople)/launch/hardware_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot1)" />
+      <arg name="uri" value="$(arg uri1)" />
+      <arg name="other_traj_topics" value="[]" />
+      <arg name="other_bound_srvs" value="[]" />
+
+      <arg name="goal_x" default="-0.5" />
+      <arg name="goal_y" default="1.5" />
+      <arg name="goal_z" default="1.0" />
+
+      <arg name="takeoff_hover_x" default="-0.5" />
+      <arg name="takeoff_hover_y" default="-0.56" />
+      <arg name="takeoff_hover_z" default="1.0" />
+    </include>
+  </group>
+
+  <!-- ========================== Robot 2. ========================== -->
+  <group ns="$(arg robot2)">
+    <include file="$(find fastpeople)/launch/hardware_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot2)" />
+      <arg name="uri" value="$(arg uri2)" />
+      <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
+      <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
+
+      <arg name="goal_x" default="-0.25" />
+      <arg name="goal_y" default="1.5" />
+      <arg name="goal_z" default="1.0" />
+
+      <arg name="takeoff_hover_x" default="1.00" />
+      <arg name="takeoff_hover_y" default="-0.56" />
+      <arg name="takeoff_hover_z" default="1.0" />
+W    </include>
+  </group>
+</launch>
