@@ -337,7 +337,7 @@ void STPeopleEnvironment<S>::Visualize() const {
   // Set up box marker.
   visualization_msgs::Marker cube;
   cube.ns = "cube";
-  cube.header.frame_id = frame_id;
+  cube.header.frame_id = this->fixed_frame_;
   cube.header.stamp = ros::Time::now();
   cube.id = 0;
   cube.type = visualization_msgs::Marker::CUBE;
