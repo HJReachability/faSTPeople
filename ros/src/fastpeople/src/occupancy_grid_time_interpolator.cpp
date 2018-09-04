@@ -114,6 +114,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
                              std::to_string(hi_prob));
   }
 
+  // Linearly interpolate in time.
   const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
 }
@@ -187,6 +188,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     throw std::runtime_error("Invalid accumulated post probability: " +
                              std::to_string(hi_prob));
 
+  // Linearly interpolate in time.
   const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
   if (hi_fraction < 0.0 || hi_fraction > 1.0) {
     throw std::runtime_error("Invalid interpolation fraction: " +

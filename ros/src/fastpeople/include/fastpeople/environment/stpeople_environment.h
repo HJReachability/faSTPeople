@@ -143,7 +143,7 @@ class STPeopleEnvironment
 template <typename S>
 bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
                                      double time) const {
-  // Lock mutex.
+  // Lock mutex. When this goes out of scope it will unlock.
   std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
 
   if (!initialized_) {
@@ -307,7 +307,7 @@ void STPeopleEnvironment<S>::SensorCallback(
 template <typename S>
 void STPeopleEnvironment<S>::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr& msg, const std::string& topic) {
-  // Lock mutex.
+  // Lock mutex. When this goes out of scope it will unlock.
   std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
 
   // Check if there's already a trajectory stored for this topic.

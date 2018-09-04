@@ -408,7 +408,7 @@ std::list<VectorXd> TimeVaryingAStar<S, E, B, SB>::FindNeighborsFromDimension(
   std::list<VectorXd> neighbors;
 
   // Catch base case.
-  if (dimension == config.size()-1) {
+  if (dimension == config.size()) {
     neighbors.emplace_back(config);
   } else {
     // For each possible value in the current dimension, populate lists of
