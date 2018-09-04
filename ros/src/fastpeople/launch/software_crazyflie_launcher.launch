@@ -6,8 +6,8 @@
 
   <!-- Probabilistic planning params. -->
   <arg name="collision_threshold" default="0.1" />
-  <arg name="collision_check_resolution" default="0.1" />
-  <arg name="grid_resolution" default="0.5" />
+  <arg name="collision_check_resolution" default="0.15" />
+  <arg name="grid_resolution" default="0.25" />
 
   <!-- Topics. -->
   <arg name="position_velocity_yaw_state_topic" default="/state/position_velocity_yaw$(arg suffix)" />
@@ -70,7 +70,7 @@
   <arg name="planner_vx" default="0.3" />
   <arg name="planner_vy" default="0.3" />
   <arg name="planner_vz" default="0.3" />
-  <arg name="planner_runtime" default="0.05" />
+  <arg name="planner_runtime" default="0.2" /> <!-- 0.05 is good runtime if you are not searching through occugrids! -->
 
   <!-- Time steps. -->
   <arg name="simulator_dt" default="0.001" />

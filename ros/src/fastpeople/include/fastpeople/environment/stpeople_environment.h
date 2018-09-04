@@ -55,9 +55,11 @@
 #include <geometry_msgs/Vector3.h>
 #include <math.h>
 #include <ros/ros.h>
+#include <ros/assert.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -119,9 +121,10 @@ class STPeopleEnvironment
   std::unordered_map<std::string, Trajectory<S>> traj_registry_;
   std::unordered_map<std::string, Box> bound_registry_;
 
-  // Map from topic to occupancy grid.
+  // Map from topic to occupancy grid, with mutex.
   std::unordered_map<std::string, OccupancyGridTimeInterpolator>
       occupancy_grid_registry_;
+  mutable std::mutex occupancy_grid_mutex_;
 
   // One subscriber for each trajectory/occupancy grid topic we're listening to.
   std::vector<ros::Subscriber> traj_subs_;
@@ -139,6 +142,9 @@ class STPeopleEnvironment
 template <typename S>
 bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
                                      double time) const {
+  // Lock mutex.
+  std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
+
   if (!initialized_) {
     ROS_WARN(
         "%s: Tried to collision check an uninitialized STPeopleEnvironment.",
@@ -183,6 +189,12 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     // probability mass inside the TEB.
     const double integrated_prob =
       interpolator.OccupancyProbability(position, bound, time);
+    constexpr double kSmallNumber = 1e-8;
+    if (integrated_prob > 1.0 + kSmallNumber || integrated_prob < -kSmallNumber) {
+      std::cout << pair.first << std::endl;
+      throw std::runtime_error("Invalid probability encountered: 0 " + std::to_string(integrated_prob));
+    }
+
     noisyOR_complement *= 1.0 - integrated_prob;
     if (1.0 - noisyOR_complement > collision_threshold_)
       return false;
@@ -196,7 +208,7 @@ template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
   if (!Environment<crazyflie_human::OccupancyGridTime, Empty>::LoadParameters(n)) {
     ROS_WARN("%s: Base class Environment could not load parameters.",
-	name_.c_str());
+	     name_.c_str());
     return false;
   }
 
@@ -252,8 +264,8 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
     // Generate a lambda function for this callback.
     boost::function<void(const fastrack_msgs::Trajectory::ConstPtr&,
                          const std::string&)>
-        callback = [this](const fastrack_msgs::Trajectory::ConstPtr& msg,
-                          const std::string& topic) {
+        callback = [=](const fastrack_msgs::Trajectory::ConstPtr& msg,
+                       const std::string& topic) {
           TrajectoryCallback(msg, topic);
         };  // callback
 
@@ -268,7 +280,7 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
     boost::function<void(const crazyflie_human::OccupancyGridTime::ConstPtr&,
                          const std::string&)>
         callback =
-            [this](const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
+            [=](const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
                    const std::string& topic) {
               OccupancyGridCallback(msg, topic);
             };  // callback
@@ -294,6 +306,9 @@ void STPeopleEnvironment<S>::SensorCallback(
 template <typename S>
 void STPeopleEnvironment<S>::TrajectoryCallback(
     const fastrack_msgs::Trajectory::ConstPtr& msg, const std::string& topic) {
+  // Lock mutex.
+  std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
+
   // Check if there's already a trajectory stored for this topic.
   auto iter = traj_registry_.find(topic);
   if (iter == traj_registry_.end()) {
@@ -313,9 +328,12 @@ template <typename S>
 void STPeopleEnvironment<S>::OccupancyGridCallback(
     const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
     const std::string& topic) {
+  // Lock mutex.
+  std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
+
   // Check if there's already an occupancy grid stored for this topic.
   auto iter = occupancy_grid_registry_.find(topic);
-  if (iter != occupancy_grid_registry_.end())    {
+  if (iter != occupancy_grid_registry_.end()) {
     // This topic already exists. Delete it and reinsert.
     occupancy_grid_registry_.erase(iter);
   }
