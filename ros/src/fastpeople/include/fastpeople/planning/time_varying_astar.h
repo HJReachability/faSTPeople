@@ -120,9 +120,13 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
     struct NodeEqual {
       inline bool operator()(const Node::Ptr& node1,
                              const Node::Ptr& node2) const {
-        return (std::abs(node1->time_ - node2->time_) < 1e-8 &&
-                node1->point_.Configuration().isApprox(
-                    node2->point_.Configuration(), 1e-8));
+        constexpr double kSmallNumber = 1e-8;
+        if (std::abs(node1->time_ - node2->time_) > kSmallNumber)
+          return false;
+
+        const VectorXd config1 = node1->point_.Configuration();
+        const VectorXd config2 = node2->point_.Configuration();
+        return config1.isApprox(config2, kSmallNumber);
       }
     };  // class NodeEqual
 
@@ -484,11 +488,12 @@ void TimeVaryingAStar<S, E, B, SB>::RemoveFromMultiset(
       matches = open.equal_range(next);
 
   // This guy lets us check the equality of two Nodes.
-  typename Node::NodeEqual equality_checker;
+  const typename Node::NodeEqual equality_checker;
 
   for (auto it = matches.first; it != matches.second; ++it) {
     // If the current iterate has the same time and point as next
-    // remove the iterate from the open set
+    // remove the iterate from the open set.
+    // NOTE! There can only be one match by construction.
     if (equality_checker(*it, next)) {
       open.erase(it);
       return;
