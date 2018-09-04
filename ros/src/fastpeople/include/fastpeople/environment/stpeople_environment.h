@@ -54,8 +54,8 @@
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Vector3.h>
 #include <math.h>
-#include <ros/ros.h>
 #include <ros/assert.h>
+#include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
@@ -74,7 +74,8 @@ class STPeopleEnvironment
     : public Environment<crazyflie_human::OccupancyGridTime, Empty> {
  public:
   ~STPeopleEnvironment() {}
-  explicit STPeopleEnvironment() : Environment<crazyflie_human::OccupancyGridTime, Empty>() {}
+  explicit STPeopleEnvironment()
+      : Environment<crazyflie_human::OccupancyGridTime, Empty>() {}
 
   // Derived classes must provide a collision checker which returns true if
   // and only if the provided position is a valid collision-free configuration.
@@ -188,16 +189,16 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
     const double integrated_prob =
-      interpolator.OccupancyProbability(position, bound, time);
+        interpolator.OccupancyProbability(position, bound, time);
     constexpr double kSmallNumber = 1e-8;
-    if (integrated_prob > 1.0 + kSmallNumber || integrated_prob < -kSmallNumber) {
-      std::cout << pair.first << std::endl;
-      throw std::runtime_error("Invalid probability encountered: 0 " + std::to_string(integrated_prob));
+    if (integrated_prob > 1.0 + kSmallNumber ||
+        integrated_prob < -kSmallNumber) {
+      throw std::runtime_error("Invalid probability encountered: " +
+                               std::to_string(integrated_prob));
     }
 
     noisyOR_complement *= 1.0 - integrated_prob;
-    if (1.0 - noisyOR_complement > collision_threshold_)
-      return false;
+    if (1.0 - noisyOR_complement > collision_threshold_) return false;
   }
 
   return true;
@@ -206,9 +207,10 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
 // Load parameters. This should still call Environment::LoadParameters.
 template <typename S>
 bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
-  if (!Environment<crazyflie_human::OccupancyGridTime, Empty>::LoadParameters(n)) {
+  if (!Environment<crazyflie_human::OccupancyGridTime, Empty>::LoadParameters(
+          n)) {
     ROS_WARN("%s: Base class Environment could not load parameters.",
-	     name_.c_str());
+             name_.c_str());
     return false;
   }
 
@@ -279,11 +281,10 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
     // Generate a lambda function for this callback.
     boost::function<void(const crazyflie_human::OccupancyGridTime::ConstPtr&,
                          const std::string&)>
-        callback =
-            [=](const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
-                   const std::string& topic) {
-              OccupancyGridCallback(msg, topic);
-            };  // callback
+        callback = [=](const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
+                       const std::string& topic) {
+          OccupancyGridCallback(msg, topic);
+        };  // callback
 
     // Create a new subscriber with this callback.
     traj_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
@@ -387,7 +388,7 @@ void STPeopleEnvironment<S>::Visualize() const {
   this->vis_pub_.publish(cube);
 }
 
-}  //\namespace environment
-}  //\namespace fastrack
+}  // namespace environment
+}  // namespace fastrack
 
 #endif

@@ -76,7 +76,7 @@ class OccupancyGridTimeInterpolator {
     double resolution;
     size_t num_cells_x;
     size_t num_cells_y;
-  }; //\struct OccupancyGrid
+  };  //\struct OccupancyGrid
 
   // Get the 1D grid index of the cell which includes the given point.
   size_t PointToIndex(double x, double y, const OccupancyGrid& grid) const;
@@ -89,7 +89,7 @@ class OccupancyGridTimeInterpolator {
   std::map<double, OccupancyGrid> occupancy_grids_;
 };  //\class OccupancyGridTimeInterpolator
 
-}  //\namespace environment
-}  //\namespace fastrack
+}  // namespace environment
+}  // namespace fastrack
 
 #endif

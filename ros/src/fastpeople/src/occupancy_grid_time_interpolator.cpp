@@ -90,22 +90,29 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   // 'lo' is definitely a valid iterator, so find the probability there.
   const size_t lo_idx = PointToIndex(position(0), position(1), lo->second);
-  const double lo_prob = (lo_idx < lo->second.data.size()) ? lo->second.data[lo_idx] : 0.0;
+  const double lo_prob =
+      (lo_idx < lo->second.data.size()) ? lo->second.data[lo_idx] : 0.0;
   constexpr double kSmallNumber = 1e-4;
-  if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber);
-    throw std::runtime_error("Invalid probability encountered: 1 " + std::to_string(lo_prob));
+  if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
+    throw std::runtime_error("Invalid probability encountered: " +
+                             std::to_string(lo_prob));
+  }
 
   // If 'hi' is not a valid iterator, then just return what we have.
   if (hi == occupancy_grids_.end()) {
-    ROS_WARN_THROTTLE(2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
+    ROS_WARN_THROTTLE(
+        2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
     return lo_prob;
   }
 
   // Extract probability at 'hi' and interpolate.
   const size_t hi_idx = PointToIndex(position(0), position(1), hi->second);
-  const double hi_prob = (hi_idx < hi->second.data.size()) ? hi->second.data[hi_idx] : 0.0;
-  if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber);
-    throw std::runtime_error("Invalid probability encountered: 2 " + std::to_string(hi_prob));;
+  const double hi_prob =
+      (hi_idx < hi->second.data.size()) ? hi->second.data[hi_idx] : 0.0;
+  if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber) {
+    throw std::runtime_error("Invalid probability encountered: " +
+                             std::to_string(hi_prob));
+  }
 
   const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
@@ -133,22 +140,27 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     for (double y = position(1) - bound.y; y < position(1) + bound.y;
          y += lo->second.resolution) {
       const size_t idx = PointToIndex(x, y, lo->second);
-      const double prob = (idx < lo->second.data.size()) ? lo->second.data[idx] : 0.0;
+      const double prob =
+          (idx < lo->second.data.size()) ? lo->second.data[idx] : 0.0;
 
-      if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber)
-         throw std::runtime_error("Invalid probability encountered: 3 " + std::to_string(prob));
+      if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
+        throw std::runtime_error("Invalid probability encountered: " +
+                                 std::to_string(prob));
+      }
+
       lo_prob += prob;
     }
   }
 
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
-    throw std::runtime_error("Invalid accumulated pre probability: " + 
-      std::to_string(lo_prob));
+    throw std::runtime_error("Invalid accumulated pre probability: " +
+                             std::to_string(lo_prob));
   }
 
   // If 'hi' is not a valid iterator, then just return what we have.
   if (hi == occupancy_grids_.end()) {
-    ROS_WARN_THROTTLE(1.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
+    ROS_WARN_THROTTLE(
+        1.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
     return lo_prob;
   }
 
@@ -159,21 +171,27 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     for (double y = position(1) - bound.y; y < position(1) + bound.y;
          y += hi->second.resolution) {
       const size_t idx = PointToIndex(x, y, hi->second);
-      const double prob = (idx < hi->second.data.size()) ? hi->second.data[idx] : 0.0;
+      const double prob =
+          (idx < hi->second.data.size()) ? hi->second.data[idx] : 0.0;
 
-      if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber)
-         throw std::runtime_error("Invalid probability encountered: 4 " + std::to_string(prob));
+      if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
+        throw std::runtime_error("Invalid probability encountered: " +
+                                 std::to_string(prob));
+      }
+
       hi_prob += prob;
     }
   }
 
   if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber)
-    throw std::runtime_error("Invalid accumulated post probability: " + 
-      std::to_string(hi_prob));
+    throw std::runtime_error("Invalid accumulated post probability: " +
+                             std::to_string(hi_prob));
 
   const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
-  if (hi_fraction < 0.0 || hi_fraction > 1.0)
-    throw std::runtime_error("Invalid interpolation fraction: " + std::to_string(hi_fraction));
+  if (hi_fraction < 0.0 || hi_fraction > 1.0) {
+    throw std::runtime_error("Invalid interpolation fraction: " +
+                             std::to_string(hi_fraction));
+  }
 
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
 }
@@ -181,8 +199,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 // Get the 1D grid index of the cell which includes the given point.
 size_t OccupancyGridTimeInterpolator::PointToIndex(
     double x, double y, const OccupancyGrid& grid) const {
-  // If out of bounds, return max index and handle later. This may happen if we
-  // attempt to query near the edges.
+  // If out of bounds, return max index and handle later. This may happen if
+  // we attempt to query near the edges.
   if (x < lower_x_ || x >= upper_x_ || y < lower_y_ || y >= upper_y_)
     return std::numeric_limits<size_t>::max();
 
@@ -197,5 +215,5 @@ size_t OccupancyGridTimeInterpolator::PointToIndex(
   return jj + grid.num_cells_y * ii;
 }
 
-}  //\namespace environment
-}  //\namespace fastrack
+}  // namespace environment
+}  // namespace fastrack
