@@ -231,8 +231,8 @@ std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
   //                       |-:-|-:-|...|-:-|-:-|  
   //                       |-:-|-:-|...|-:-|-:-|
   //                       |-:-|-:-|...|-:-|-:-|
-  //                 ymin  |-:-|-:-|...|-:-|-:-|
-  //                        -------------------
+  //                       |-:-|-:-|...|-:-|-:-|
+  //                 ymin   -------------------
   //                      xmin                xmax
   // and the (0,0) grid index corresponds to (lower_x_, upper_y_).
   const double grid_x = std::round((x - lower_x_) / grid.resolution);
