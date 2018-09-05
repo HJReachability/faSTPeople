@@ -509,8 +509,15 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
   std::vector<S> positions;
   std::vector<double> times;
 
+  ROS_DEBUG("%s: Collision probability for trajectory (from goal to start):", 
+    this->name_.c_str());
   // Populate these lists by walking backward, then reverse.
   for (typename Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
+    const double collision_probability = 
+      this->env_.HumanCollisionProbability(n->point_.Configuration(), this->bound_, n->time_);
+    ROS_DEBUG("time: %5.3f, probability: %4.3f", 
+      (n->time_ - node->time_), collision_probability);
+
     positions.push_back(n->point_);
     times.push_back(n->time_);
   }

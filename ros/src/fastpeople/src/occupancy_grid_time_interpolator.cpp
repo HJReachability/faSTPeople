@@ -47,6 +47,13 @@
 
 #include <ros/ros.h>
 
+namespace {
+// Helper function to convert 2D index to 1D index.
+static size_t FlattenIndex(const std::pair<size_t, size_t>& idx_2d, size_t num_cells_y) {
+  return idx_2d.second + idx_2d.first * num_cells_y;
+}
+}; //\namespace
+
 namespace fastrack {
 namespace environment {
 
@@ -68,6 +75,16 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
         OccupancyGrid{grid.data, static_cast<double>(grid.resolution),
                       static_cast<size_t>(grid.width),
                       static_cast<size_t>(grid.height)});
+
+    // Sanity check that we are getting a valid PDF. 
+    const double total_probability = 
+      std::accumulate(std::begin(grid.data), std::end(grid.data), 0.0);
+    constexpr double kSmallNumber = 1e-4;
+    if (total_probability > 1.0 + kSmallNumber) {
+      throw std::runtime_error("Invalid occupancy grid data! Total probability: " +
+        std::to_string(total_probability));
+    }
+
   }
 
   // Make sure we have at least one occupancy grid.
@@ -89,9 +106,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   }
 
   // 'lo' is definitely a valid iterator, so find the probability there.
-  const size_t lo_idx = PointToIndex(position(0), position(1), lo->second);
-  const double lo_prob =
-      (lo_idx < lo->second.data.size()) ? lo->second.data[lo_idx] : 0.0;
+  const auto lo_idx = PointToIndex(position(0), position(1), lo->second);
+  const double lo_prob = lo->second.data[FlattenIndex(lo_idx, lo->second.num_cells_y)];
   constexpr double kSmallNumber = 1e-4;
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
     throw std::runtime_error("Invalid probability encountered: " +
@@ -106,9 +122,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   }
 
   // Extract probability at 'hi' and interpolate.
-  const size_t hi_idx = PointToIndex(position(0), position(1), hi->second);
-  const double hi_prob =
-      (hi_idx < hi->second.data.size()) ? hi->second.data[hi_idx] : 0.0;
+  const auto hi_idx = PointToIndex(position(0), position(1), hi->second);
+  const double hi_prob = hi->second.data[FlattenIndex(hi_idx, hi->second.num_cells_y)];
   if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber) {
     throw std::runtime_error("Invalid probability encountered: " +
                              std::to_string(hi_prob));
@@ -133,26 +148,34 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     lo--;
   }
 
+  // Get low and high indices in each dimension.
+  // NOTE: Because the layout of the grid assumes (0,0) grid index corresponds to (lower_x_, upper_y_)
+  //       then we need to add y (where we'd usually subtract y) and visa versa.
+  //      
+  //               (p(0)-b.x, p(1)+b.y) _______
+  //                                   |       |
+  //                                   |  TEB  |
+  //                                   |_______|
+  //                                            (p(0)+b.x, p(1)-b.y)
+  const auto lower_idx_2d = PointToIndex(position(0) - bound.x, position(1) + bound.y, lo->second);
+  const auto upper_idx_2d = PointToIndex(position(0) + bound.x, position(1) - bound.y, lo->second);
+
   // 'lo' is definitely a valid iterator, so find the probability there.
   double lo_prob = 0.0;
   constexpr double kSmallNumber = 1e-4;
-  for (double x = position(0) - bound.x; x < position(0) + bound.x;
-       x += lo->second.resolution) {
-    for (double y = position(1) - bound.y; y < position(1) + bound.y;
-         y += lo->second.resolution) {
-      const size_t idx = PointToIndex(x, y, lo->second);
-      const double prob =
-          (idx < lo->second.data.size()) ? lo->second.data[idx] : 0.0;
-
+  for (size_t ii = lower_idx_2d.first; ii <= upper_idx_2d.first; ii++) {
+    for (size_t jj = lower_idx_2d.second; jj <= upper_idx_2d.second; jj++) {
+      // Convert from 2D index to 1D index, and get the probability at the current point.
+      const double prob = lo->second.data[FlattenIndex(std::make_pair(ii, jj), lo->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
         throw std::runtime_error("Invalid probability encountered: " +
                                  std::to_string(prob));
       }
-
       lo_prob += prob;
     }
   }
 
+  // Sanity check if the summed probability is valid.
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
     throw std::runtime_error("Invalid accumulated pre probability: " +
                              std::to_string(lo_prob));
@@ -167,23 +190,19 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   // Extract probability at 'hi' and interpolate.
   double hi_prob = 0.0;
-  for (double x = position(0) - bound.x; x < position(0) + bound.x;
-       x += hi->second.resolution) {
-    for (double y = position(1) - bound.y; y < position(1) + bound.y;
-         y += hi->second.resolution) {
-      const size_t idx = PointToIndex(x, y, hi->second);
-      const double prob =
-          (idx < hi->second.data.size()) ? hi->second.data[idx] : 0.0;
-
+  for (size_t ii = lower_idx_2d.first; ii <= upper_idx_2d.first; ii++) {
+    for (size_t jj = lower_idx_2d.second; jj <= upper_idx_2d.second; jj++) {
+      // Convert from 2D index to 1D index, and get the probability at the current point.
+      const double prob = hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
         throw std::runtime_error("Invalid probability encountered: " +
                                  std::to_string(prob));
       }
-
       hi_prob += prob;
     }
   }
 
+  // Sanity check if the summed probability is valid.
   if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber)
     throw std::runtime_error("Invalid accumulated post probability: " +
                              std::to_string(hi_prob));
@@ -198,23 +217,33 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
 }
 
-// Get the 1D grid index of the cell which includes the given point.
-size_t OccupancyGridTimeInterpolator::PointToIndex(
+// Get the 2D grid index of the cell which includes the given point.
+std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
     double x, double y, const OccupancyGrid& grid) const {
   // If out of bounds, return max index and handle later. This may happen if
   // we attempt to query near the edges.
-  if (x < lower_x_ || x >= upper_x_ || y < lower_y_ || y >= upper_y_)
-    return std::numeric_limits<size_t>::max();
+  if (x < lower_x_ || x >= upper_x_ || y < lower_y_ || y >= upper_y_) {
+    std::cout << "You dummy." << std::endl;
+    throw std::runtime_error("Tried to interpolate off the grid.");
+  }
 
   // NOTE: Assuming layout is
+  //                 ymax   -------------------
+  //                       |-:-|-:-|...|-:-|-:-|  
   //                       |-:-|-:-|...|-:-|-:-|
+  //                       |-:-|-:-|...|-:-|-:-|
+  //                       |-:-|-:-|...|-:-|-:-|
+  //                 ymin   -------------------
   //                      xmin                xmax
-  // and that upper-left corner in the 'data' grid is lower-left corner in
-  // Cartesian space.
-  const size_t ii = static_cast<size_t>((x - lower_x_) / grid.resolution);
-  const size_t jj = static_cast<size_t>((y - lower_y_) / grid.resolution);
+  // and the (0,0) grid index corresponds to (lower_x_, upper_y_).
+  const double grid_x = std::round((x - lower_x_) / grid.resolution);
+  const double grid_y = std::round((upper_y_ - y) / grid.resolution);
+  const size_t ii = std::min(grid.num_cells_x - 1, 
+    static_cast<size_t>(std::max(0.0, grid_x)));
+  const size_t jj = std::min(grid.num_cells_y - 1, 
+    static_cast<size_t>(std::max(0.0, grid_y)));
 
-  return jj + grid.num_cells_y * ii;
+  return std::make_pair(ii, jj);
 }
 
 }  // namespace environment
