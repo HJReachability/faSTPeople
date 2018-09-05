@@ -83,7 +83,8 @@ class STPeopleEnvironment
   bool IsValid(const Vector3d& position, const Box& bound, double time) const;
 
   // Returns just the noisy-OR'd collision probability with the humans.
-  double HumanCollisionProb(const Vector3d& position, const Box& bound, double time) const;
+  double HumanCollisionProbability(const Vector3d& position, 
+    const Box& bound, double time) const;
 
   // Generate a sensor measurement.
   crazyflie_human::OccupancyGridTime SimulateSensor(const Empty& params) const {
@@ -209,8 +210,8 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
 
 // Returns just the noisy-OR probability of collision. 
 template <typename S>
-double STPeopleEnvironment<S>::HumanCollisionProb(const Vector3d& position, 
-                                          const Box& bound, double time) const {
+double STPeopleEnvironment<S>::HumanCollisionProbability(const Vector3d& position, 
+  const Box& bound, double time) const {
 
   // Compute the total collision probability with each human and noisyOR
   // the probabilities togther to check if beneath collision threshold.

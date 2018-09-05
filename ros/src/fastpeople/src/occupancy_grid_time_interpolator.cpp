@@ -61,21 +61,13 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
   if (lower_x_ > upper_x_ || lower_y_ > upper_y_)
     throw std::runtime_error("Invalid lower/upper bounds.");
 
-  //std::printf("x in (%f, %f), y in (%f, %f)\n", lower_x_, upper_x_, lower_y_, upper_y_);
-
   // Step through each grid in msg and populate our local copy.
   for (const auto& grid : msg->gridarray) {
-    //std::cout << "Time of msg wrt current time: " << (ros::Time::now() - grid.header.stamp).toSec() << std::endl;
     occupancy_grids_.emplace(
         grid.header.stamp.toSec(),
         OccupancyGrid{grid.data, static_cast<double>(grid.resolution),
                       static_cast<size_t>(grid.width),
                       static_cast<size_t>(grid.height)});
-
-    //std::printf("Grid num_cells_x = %zu, num_cells_y = %zu, res = %f\n",
-    //  static_cast<size_t>(grid.width), 
-    //  static_cast<size_t>(grid.height), 
-    //  static_cast<double>(grid.resolution));
 
     // Sanity check that we are getting a valid PDF. 
     const double total_probability = 
@@ -90,13 +82,6 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
   // Make sure we have at least one occupancy grid.
   if (occupancy_grids_.empty())
     throw std::runtime_error("Empty OccupancyGridTime msg.");
-
-  const Vector3d position(1.63, 0.46, 1.0);
-  const double starting_probability = 
-    OccupancyProbability(position, msg->gridarray[0].header.stamp.toSec());
-//  if (starting_probability < 1.0 - 1e-08) {
-    std::cout << "starting probability: " << starting_probability << std::endl;
-//  }
 }
 
 // Get occupancy probability at the given position at the given time.
@@ -250,8 +235,7 @@ std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
   // NOTE: Assuming layout is
   //                       |-:-|-:-|...|-:-|-:-|
   //                      xmin                xmax
-  // and that upper-left corner in the 'data' grid is lower-left corner in
-  // Cartesian space.
+  // and the (0,0) grid index corresponds to (lower_x_, upper_y_).
   const double grid_x = std::round((x - lower_x_) / grid.resolution);
   const double grid_y = std::round((upper_y_ - y) / grid.resolution);
   const size_t ii = std::min(grid.num_cells_x - 1, 
@@ -260,10 +244,6 @@ std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
     static_cast<size_t>(std::max(0.0, grid_y)));
 
   return std::make_pair(ii, jj);
-  //const size_t ii = static_cast<size_t>((x - lower_x_) / grid.resolution);
-  //const size_t jj = static_cast<size_t>((upper_y_ - y) / grid.resolution);
-
-  //return jj + grid.num_cells_y * ii;
 }
 
 }  // namespace environment
