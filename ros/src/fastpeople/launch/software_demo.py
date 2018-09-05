@@ -40,6 +40,10 @@ def sigint_handler(sig, frame):
     # Exit successfully.
     sys.exit(0)
 
+
+# Register custom signal handler on SIGINT.
+signal.signal(signal.SIGINT, sigint_handler)
+
 # Set up processes and let it go.
 # (1) Launch the crazyflies.
 robot_launch = subprocess.Popen(["roslaunch", "fastpeople", "software_demo.launch"])
@@ -49,7 +53,7 @@ TIME_BEFORE_TAKEOFF = 3.0
 time.sleep(TIME_BEFORE_TAKEOFF)
 
 # (3) Send takeoff signal.
-takeoff = subprocess.Popen(["./takeoff.sh"])
+takeoff = subprocess.Popen(["rosservice", "call", "takeoffHY4"])
 
 # (4) Wait a fixed amount of time for takeoff to initiate before starting
 # human motion predictor.
@@ -57,4 +61,6 @@ TIME_BEFORE_HUMAN = 3.0
 time.sleep(TIME_BEFORE_HUMAN)
 
 # (5) Initiate human predictor.
-human_launch = subprocess.Popen(["roslaunch", "crazyflie_human", "multi_sim.launch"])
+human_launch = subprocess.Popen(["roslaunch", "crazyflie_human", "simulated_demo.launch"])
+
+signal.pause()
