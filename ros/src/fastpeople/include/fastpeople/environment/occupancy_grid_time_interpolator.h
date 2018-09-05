@@ -79,7 +79,7 @@ class OccupancyGridTimeInterpolator {
     size_t num_cells_y;
   };  //\struct OccupancyGrid
 
-  // Get the 1D grid index of the cell which includes the given point.
+  // Get the 2D grid index of the cell which includes the given point.
   std::pair<size_t, size_t> PointToIndex(double x, double y, const OccupancyGrid& grid) const;
 
   // Lower and upper bounds in x/y dimensions.

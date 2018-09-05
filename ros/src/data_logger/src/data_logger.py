@@ -1,5 +1,5 @@
 """
-Copyright (c) 2017, The Regents of the University of California (Regents).
+Copyright (c) 2018, The Regents of the University of California (Regents).
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 Please contact the author(s) of this library if you have any questions.
 Authors: David Fridovich-Keil   ( dfk@eecs.berkeley.edu )
+         Andrea Bajcsy          ( abajcsy@eecs.berkeley.edu )
 """
 
 ################################################################################
@@ -85,7 +86,6 @@ class DataLogger(object):
     # Initialization and loading parameters.
     def Initialize(self):
         self._name = rospy.get_name() + "/data_logger"
-
 
         right_now = rospy.Time.now()
 

@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="suffix" default="HY4" />
 
   <!-- Topics. -->
   <arg name="human_topic" default="/human_pose1" />
-  <arg name="robot_topic" default="/state/position_velocity_yawHY4" />
-  <arg name="traj_request_topic" default="/request_trajHY4" />
+  <arg name="robot_topic" default="/state/position_velocity_yaw$(arg suffix)" />
+  <arg name="traj_request_topic" default="/request_traj$(arg suffix)" />
 
   <!-- Logging params. -->
   <arg name="time_step" default="0.1" />
