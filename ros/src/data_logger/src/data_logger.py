@@ -207,6 +207,9 @@ class DataLogger(object):
             dt = (msg.header.stamp - self._human_time).to_sec()
             velocity = (position - self._human_position) / dt
 
+            # Update human velocity by a linear combination of the
+            # new measured velocity and the old velocity. Weighting
+            # is based on the velocity decay factor.
             self._human_velocity = (velocity * self._velocity_decay +
                                     self._human_velocity * (1.0 - self._velocity_decay))
             self._human_position = position

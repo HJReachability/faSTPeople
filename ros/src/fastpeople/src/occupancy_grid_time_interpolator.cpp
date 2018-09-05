@@ -151,11 +151,11 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   // NOTE: Because the layout of the grid assumes (0,0) grid index corresponds to (lower_x_, upper_y_)
   //       then we need to add y (where we'd usually subtract y) and visa versa.
   //      
-  //               (p(0)-b.x, p(0)+b.y) _______
+  //               (p(0)-b.x, p(1)+b.y) _______
   //                                   |       |
   //                                   |  TEB  |
   //                                   |_______|
-  //                                            (p(0)+b.x, p(0)-b.y)
+  //                                            (p(0)+b.x, p(1)-b.y)
   const auto lower_idx_2d = PointToIndex(position(0) - bound.x, position(1) + bound.y, lo->second);
   const auto upper_idx_2d = PointToIndex(position(0) + bound.x, position(1) - bound.y, lo->second);
 
