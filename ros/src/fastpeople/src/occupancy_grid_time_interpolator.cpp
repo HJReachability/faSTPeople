@@ -79,7 +79,8 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
     // Sanity check that we are getting a valid PDF. 
     const double total_probability = 
       std::accumulate(std::begin(grid.data), std::end(grid.data), 0.0);
-    if (total_probability > 1.0) {
+    constexpr double kSmallNumber = 1e-4;
+    if (total_probability > 1.0 + kSmallNumber) {
       throw std::runtime_error("Invalid occupancy grid data! Total probability: " +
         std::to_string(total_probability));
     }
