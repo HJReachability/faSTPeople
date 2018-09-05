@@ -33,7 +33,7 @@
     </include>
   </group>
 
-  <!-- ========================== Robot 2. ========================== -->
+  <!-- ========================== Robot 2. ========================== 
   <group ns="$(arg robot2)">
     <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
       <arg name="suffix" value="$(arg robot2)" />
@@ -48,5 +48,5 @@
       <arg name="takeoff_hover_y" default="1.88" />
       <arg name="takeoff_hover_z" default="1.0" />
     </include>
-  </group>
+  </group>-->
 </launch>

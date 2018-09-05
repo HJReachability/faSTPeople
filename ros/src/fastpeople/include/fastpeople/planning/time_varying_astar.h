@@ -171,7 +171,7 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
       std::multiset<typename Node::Ptr, typename Node::NodeComparitor>& open);
 
   // Walk backward from the given node to the root to create a Trajectory.
-  Trajectory<S> GenerateTrajectory(const typename Node::ConstPtr& node) const;
+  Trajectory<S> GenerateTrajectory(const typename Node::ConstPtr& node, const double start_time=0.0) const;
 
   // Helper function to find all neighboring nodes from the specified dimension
   // to the final dimension.
@@ -298,7 +298,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
       wait_time.sleep();
 
-      return GenerateTrajectory(terminus);
+      return GenerateTrajectory(terminus, start_time);
     }
 
     // Add this to the closed list.
@@ -504,13 +504,18 @@ void TimeVaryingAStar<S, E, B, SB>::RemoveFromMultiset(
 // Walk backward from the given node to the root to create a Trajectory.
 template <typename S, typename E, typename B, typename SB>
 Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
-    const typename Node::ConstPtr& node) const {
+    const typename Node::ConstPtr& node, const double start_time) const {
   // Start with an empty list of positions and times.
   std::vector<S> positions;
   std::vector<double> times;
 
+  std::cout << "Collision prob for trajectory (from back to front): \n";
   // Populate these lists by walking backward, then reverse.
   for (typename Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
+
+    const double collision_prob = this->env_.HumanCollisionProb(n->point_.Configuration(), this->bound_, n->time_);
+    std::cout << (n->time_ - start_time) << " |" << collision_prob << std::endl;
+
     positions.push_back(n->point_);
     times.push_back(n->time_);
   }

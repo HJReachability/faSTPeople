@@ -82,6 +82,9 @@ class STPeopleEnvironment
   // Provide a separate collision check for each type of tracking error bound.
   bool IsValid(const Vector3d& position, const Box& bound, double time) const;
 
+  // Returns just the noisy-OR'd collision probability with the humans.
+  double HumanCollisionProb(const Vector3d& position, const Box& bound, double time) const;
+
   // Generate a sensor measurement.
   crazyflie_human::OccupancyGridTime SimulateSensor(const Empty& params) const {
     throw std::runtime_error("SimulateSensor is not implemented.");
@@ -202,6 +205,34 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
   }
 
   return true;
+}
+
+// Returns just the noisy-OR probability of collision. 
+template <typename S>
+double STPeopleEnvironment<S>::HumanCollisionProb(const Vector3d& position, 
+                                          const Box& bound, double time) const {
+
+  // Compute the total collision probability with each human and noisyOR
+  // the probabilities togther to check if beneath collision threshold.
+  double noisyOR_complement = 1.0;
+  for (const auto& pair : occupancy_grid_registry_) {
+    const OccupancyGridTimeInterpolator& interpolator = pair.second;
+
+    // Interpolate the human's occupancy grid in time and then integrate the
+    // probability mass inside the TEB.
+    const double integrated_prob =
+        interpolator.OccupancyProbability(position, bound, time);
+    constexpr double kSmallNumber = 1e-8;
+    if (integrated_prob > 1.0 + kSmallNumber ||
+        integrated_prob < -kSmallNumber) {
+      throw std::runtime_error("Invalid probability encountered: " +
+                               std::to_string(integrated_prob));
+    }
+
+    noisyOR_complement *= 1.0 - integrated_prob;
+  }
+
+  return 1.0 - noisyOR_complement;
 }
 
 // Load parameters. This should still call Environment::LoadParameters.
