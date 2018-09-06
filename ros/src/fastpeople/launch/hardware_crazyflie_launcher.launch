@@ -35,6 +35,7 @@
   <arg name="updated_env_topic" default="/updated_env$(arg suffix)" />
   <arg name="sensor_vis_topic" default="/vis/sensor$(arg suffix)" />
   <arg name="traj_vis_topic" default="/vis/traj$(arg suffix)" />
+  <arg name="goal_vis_topic" default="/vis/goal$(arg suffix)" />
   <arg name="bound_vis_topic" default="/vis/bound$(arg suffix)" />
   <arg name="known_env_vis_topic" default="/vis/known_env$(arg suffix)" />
   <arg name="true_env_vis_topic" default="/vis/true_env$(arg suffix)" />
@@ -156,7 +157,7 @@
     <arg name="updated_env_topic" value="$(arg updated_env_topic)" />
     <arg name="ref_topic" value="$(arg fastrack_reference_state_topic)" />
     <arg name="traj_vis" value="$(arg traj_vis_topic)" />
-    <arg name="bound_vis" value="$(arg bound_vis_topic)" />
+    <arg name="goal_vis" value="$(arg goal_vis_topic)" />
     <arg name="fixed_frame" value="$(arg fixed_frame)" />
     <arg name="planner_frame" value="$(arg planner_frame)" />
     <arg name="planner_runtime" value="$(arg planner_runtime)" />

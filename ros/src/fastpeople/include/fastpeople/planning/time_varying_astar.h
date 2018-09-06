@@ -239,13 +239,20 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
   open.insert(start_node);
   open_registry.insert(start_node);
 
+  // Backup trajectory that hovers at the start point. Used in case of failure.
+  constexpr double kHoverTime = 10.0; // s
+  const Trajectory<S> backup_traj(
+    std::vector<S>({start, start}),
+    std::vector<double>({start_time, start_time + kHoverTime}));
+
+
   // Main loop - repeatedly expand the top priority node and
   // insert neighbors that are not already in the closed list.
   while (true) {
     // Check if we have run out of planning time.
     if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
       ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
-      return Trajectory<S>();
+      return backup_traj;
     }
 
     // Checking open list size.
@@ -255,7 +262,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
     if (open.empty()) {
       ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", this->name_.c_str());
-      return Trajectory<S>();
+      return backup_traj;
     }
 
     const typename Node::Ptr next = *open.begin();
@@ -509,13 +516,13 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::GenerateTrajectory(
   std::vector<S> positions;
   std::vector<double> times;
 
-  ROS_DEBUG("%s: Collision probability for trajectory (from goal to start):", 
+  ROS_DEBUG("%s: Collision probability for trajectory (from goal to start):",
     this->name_.c_str());
   // Populate these lists by walking backward, then reverse.
   for (typename Node::ConstPtr n = node; n != nullptr; n = n->parent_) {
-    const double collision_probability = 
+    const double collision_probability =
       this->env_.HumanCollisionProbability(n->point_.Configuration(), this->bound_, n->time_);
-    ROS_DEBUG("time: %5.3f, probability: %4.3f", 
+    ROS_DEBUG("time: %5.3f, probability: %4.3f",
       (n->time_ - node->time_), collision_probability);
 
     positions.push_back(n->point_);
