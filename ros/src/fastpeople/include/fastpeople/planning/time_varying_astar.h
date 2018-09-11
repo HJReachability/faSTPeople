@@ -264,7 +264,6 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", this->name_.c_str());
       return backup_traj;
     }
-
     const typename Node::Ptr next = *open.begin();
 
     // Pop the next node from the open_registry and open set.

@@ -20,6 +20,9 @@
   <arg name="uri1" default="$(arg HY4)" />
   <arg name="uri2" default="$(arg HY5)" />
 
+  <!-- Merger mode. -->
+  <arg name="merger_mode" default="PRIORITIZED" />
+
   <!-- Record? -->
   <arg name="record" default="false" />
 
@@ -49,6 +52,8 @@
       <arg name="takeoff_hover_x" default="0.75" />
       <arg name="takeoff_hover_y" default="-0.66" />
       <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
     </include>
   </group>
 
@@ -62,11 +67,22 @@
 
       <arg name="goal_x" default="1.38" />
       <arg name="goal_y" default="-0.52" />
-      <arg name="goal_z" default="1.0" />
+      <arg name="goal_z" default="1.0" /> 
+
+      <!-- <arg name="goal_x" default="1.03" />
+      <arg name="goal_y" default="-0.17" />
+      <arg name="goal_z" default="1.0" />-->
+
+      <!--     
+      x: 1.02723538876
+      y: -0.171466261148
+      z: 1.69186854362 -->
 
       <arg name="takeoff_hover_x" default="-1.41" />
       <arg name="takeoff_hover_y" default="1.88" />
       <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
     </include>
   </group>
 </launch>

@@ -118,7 +118,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   if (hi == occupancy_grids_.end()) {
     ROS_WARN_THROTTLE(
         2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
-    return lo_prob;
+    return 0.0;
+    //return lo_prob;
   }
 
   // Extract probability at 'hi' and interpolate.
@@ -185,7 +186,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   if (hi == occupancy_grids_.end()) {
     ROS_WARN_THROTTLE(
         1.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
-    return lo_prob;
+    return 0.0;
+    //return lo_prob;
   }
 
   // Extract probability at 'hi' and interpolate.

@@ -5,6 +5,9 @@
   <arg name="robot1" default="HY4" />
   <arg name="robot2" default="HY5" />
 
+  <!-- Merger mode. -->
+  <arg name="merger_mode" default="PRIORITIZED" />
+
   <!-- Record? -->
   <arg name="record" default="false" />
 
@@ -30,10 +33,12 @@
       <arg name="takeoff_hover_x" default="0.75" />
       <arg name="takeoff_hover_y" default="-0.66" />
       <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
     </include>
   </group>
 
-  <!-- ========================== Robot 2. ========================== 
+  <!-- ========================== Robot 2. ========================== -->
   <group ns="$(arg robot2)">
     <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
       <arg name="suffix" value="$(arg robot2)" />
@@ -42,11 +47,13 @@
 
       <arg name="goal_x" default="1.38" />
       <arg name="goal_y" default="-0.52" />
-      <arg name="goal_z" default="1.0" />
+      <arg name="goal_z" default="1.0" /> 
 
       <arg name="takeoff_hover_x" default="-1.41" />
       <arg name="takeoff_hover_y" default="1.88" />
       <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
     </include>
-  </group>-->
+  </group>
 </launch>
