@@ -74,7 +74,11 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
         grid.header.stamp.toSec(),
         OccupancyGrid{grid.data, static_cast<double>(grid.resolution),
                       static_cast<size_t>(grid.width),
-                      static_cast<size_t>(grid.height)});
+                      static_cast<size_t>(grid.height),
+                      static_cast<double>(grid.lower_x),
+                      static_cast<double>(grid.upper_x),
+                      static_cast<double>(grid.lower_y),
+                      static_cast<double>(grid.upper_y)});
 
     // Sanity check that we are getting a valid PDF. 
     const double total_probability = 
@@ -106,7 +110,14 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   }
 
   // 'lo' is definitely a valid iterator, so find the probability there.
-  const auto lo_idx = PointToIndex(position(0), position(1), lo->second);
+  std::pair<size_t, size_t> lo_idx;
+  try {
+    lo_idx = PointToIndex(position(0), position(1), lo->second);
+  } catch (const std::exception& e) {
+    ROS_WARN_THROTTLE(1.0, "OccupancyGridTimeInterpolator: off the grid.");
+    return 0.0;
+  }
+
   const double lo_prob = lo->second.data[FlattenIndex(lo_idx, lo->second.num_cells_y)];
   constexpr double kSmallNumber = 1e-4;
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
@@ -123,7 +134,15 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   }
 
   // Extract probability at 'hi' and interpolate.
-  const auto hi_idx = PointToIndex(position(0), position(1), hi->second);
+  std::pair<size_t, size_t> hi_idx;
+
+  try {
+    hi_idx = PointToIndex(position(0), position(1), hi->second);
+  } catch (const std::exception& e) {
+    ROS_WARN_THROTTLE(1.0, "OccupancyGridTimeInterpolator: off the grid.");
+    return 0.0;
+  }
+
   const double hi_prob = hi->second.data[FlattenIndex(hi_idx, hi->second.num_cells_y)];
   if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber) {
     throw std::runtime_error("Invalid probability encountered: " +
@@ -158,8 +177,16 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   //                                   |  TEB  |
   //                                   |_______|
   //                                            (p(0)+b.x, p(1)-b.y)
-  const auto lower_idx_2d = PointToIndex(position(0) - bound.x, position(1) + bound.y, lo->second);
-  const auto upper_idx_2d = PointToIndex(position(0) + bound.x, position(1) - bound.y, lo->second);
+
+  std::pair<size_t, size_t> lower_idx_2d, upper_idx_2d;
+
+  try {
+    lower_idx_2d = PointToIndex(position(0) - bound.x, position(1) + bound.y, lo->second);
+    upper_idx_2d = PointToIndex(position(0) + bound.x, position(1) - bound.y, lo->second);
+  } catch (const std::exception& e) {
+    ROS_WARN_THROTTLE(1.0, "OccupancyGridTimeInterpolator: off the grid.");
+    return 0.0;
+  }
 
   // 'lo' is definitely a valid iterator, so find the probability there.
   double lo_prob = 0.0;
@@ -224,8 +251,8 @@ std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
     double x, double y, const OccupancyGrid& grid) const {
   // If out of bounds, return max index and handle later. This may happen if
   // we attempt to query near the edges.
-  if (x < lower_x_ || x >= upper_x_ || y < lower_y_ || y >= upper_y_) {
-    std::cout << "You dummy." << std::endl;
+  if (x < grid.lower_x || x >= grid.upper_x || 
+      y < grid.lower_y || y >= grid.upper_y) {
     throw std::runtime_error("Tried to interpolate off the grid.");
   }
 
@@ -238,8 +265,8 @@ std::pair<size_t, size_t> OccupancyGridTimeInterpolator::PointToIndex(
   //                 ymin   -------------------
   //                      xmin                xmax
   // and the (0,0) grid index corresponds to (lower_x_, upper_y_).
-  const double grid_x = std::round((x - lower_x_) / grid.resolution);
-  const double grid_y = std::round((upper_y_ - y) / grid.resolution);
+  const double grid_x = std::round((x - grid.lower_x) / grid.resolution);
+  const double grid_y = std::round((grid.upper_y - y) / grid.resolution);
   const size_t ii = std::min(grid.num_cells_x - 1, 
     static_cast<size_t>(std::max(0.0, grid_x)));
   const size_t jj = std::min(grid.num_cells_y - 1, 

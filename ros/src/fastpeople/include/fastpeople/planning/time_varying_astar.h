@@ -294,17 +294,16 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       if (!CollisionCheck(parent_node->point_, end, parent_node->time_, terminus_time)) {
         ROS_WARN("%s: Collision check failure adding terminus.",
                 this->name_.c_str());
-        break;
+      } else {
+        // Wait until planning time has elapsed before returning.
+        ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
+                 (ros::Time::now() - plan_start_time).toSec());
+        const ros::Duration wait_time(
+          this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
+        wait_time.sleep();
+
+        return GenerateTrajectory(terminus);
       }
-
-      // Wait until planning time has elapsed before returning.
-      ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
-               (ros::Time::now() - plan_start_time).toSec());
-      const ros::Duration wait_time(
-        this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
-      wait_time.sleep();
-
-      return GenerateTrajectory(terminus);
     }
 
     // Add this to the closed list.
@@ -414,7 +413,7 @@ std::list<VectorXd> TimeVaryingAStar<S, E, B, SB>::FindNeighborsFromDimension(
   std::list<VectorXd> neighbors;
 
   // Catch base case.
-  if (dimension == config.size()) {
+  if (dimension == config.size()-1) {
     neighbors.emplace_back(config);
   } else {
     // For each possible value in the current dimension, populate lists of
