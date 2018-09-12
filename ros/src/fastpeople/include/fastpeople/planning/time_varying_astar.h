@@ -159,11 +159,29 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   };  //\struct Node
 
   // Collision check a line segment between the two points with the given
-  // start and stop times. Returns true if the path is collision free and
-  // false otherwise.
+  // start and stop times. Also overloaded to collision check an entire
+  // trajectory.
+  // Returns true if the path is collision free and false otherwise.
   bool CollisionCheck(const S& start, const S& stop, double start_time,
                       double stop_time) const;
+  bool CollisionCheck(const Trajectory<S>& traj, double start_time) const {
+    if (traj.Size() == 0) return false;
 
+    // Loop over all intervals on the trajectory and collision check.
+    const auto& states = traj.States();
+    const auto& times = traj.Times();
+    for (size_t ii = 1; ii < traj.Size(); ii++) {
+      // Skip times before the desired start time.
+      // HACK: we could just binary search to find this index beforehand.
+      if (times[ii - 1] < start_time) continue;
+      if (!CollisionCheck(states[ii - 1], states[ii],
+			  times[ii - 1], times[ii]))
+	  return false;
+    }
+
+    return true;
+  }
+    
   // This function removes all instances of next with matching
   // point and time values from the given multiset (there should only be 1).
   static void RemoveFromMultiset(
@@ -197,6 +215,12 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   // Maximum distance between test points on line segments being
   // collision checked.
   double collision_check_resolution_;
+
+  // Most recent trajectory.
+  mutable Trajectory<S> most_recent_traj_;
+  
+  // Mutex lock.
+  mutable std::mutex mutex_;
 };  //\class TimeVaryingAStar
 
 // --------------------------- IMPLEMENTATION ------------------------------- //
@@ -207,9 +231,20 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
 template <typename S, typename E, typename B, typename SB>
 Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
                                                   double start_time) const {
-  const ros::Time plan_start_time = ros::Time::now();
-  constexpr double kStayPutTime = 1.0;
+  // Lock the mutex for the entire duration of this planning invocation.
+  std::lock_guard<std::mutex> lock(mutex_);
 
+  const ros::Time plan_start_time = ros::Time::now();
+
+  // Check to see if our most recent trajectory is still valid. Set backup
+  // trajectory as most recent trajectory if valid; otherwise, set a backup
+  // that hovers at the start point. Used in case of failure.
+  constexpr double kHoverTime = 10.0; // s
+  const Trajectory<S> backup_traj =
+    (CollisionCheck(most_recent_traj_, start_time)) ? most_recent_traj_ :
+    Trajectory<S>(std::vector<S>({start, start}),
+		  std::vector<double>({start_time, start_time + kHoverTime}));
+  
   // Make a set for the open set. This stores the candidate "fringe" nodes
   // we might want to expand. This is sorted by priority and allows multiple
   // nodes with the same priority to be in the list.
@@ -238,21 +273,15 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
   open.insert(start_node);
   open_registry.insert(start_node);
-
-  // Backup trajectory that hovers at the start point. Used in case of failure.
-  constexpr double kHoverTime = 10.0; // s
-  const Trajectory<S> backup_traj(
-    std::vector<S>({start, start}),
-    std::vector<double>({start_time, start_time + kHoverTime}));
-
-
+  
   // Main loop - repeatedly expand the top priority node and
   // insert neighbors that are not already in the closed list.
   while (true) {
     // Check if we have run out of planning time.
     if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
       ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
-      return backup_traj;
+      most_recent_traj_ = backup_traj;
+      return most_recent_traj_;
     }
 
     // Checking open list size.
@@ -262,8 +291,10 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
 
     if (open.empty()) {
       ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", this->name_.c_str());
-      return backup_traj;
+      most_recent_traj_ = backup_traj;
+      return most_recent_traj_;
     }
+
     const typename Node::Ptr next = *open.begin();
 
     // Pop the next node from the open_registry and open set.
@@ -298,11 +329,16 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         // Wait until planning time has elapsed before returning.
         ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
                  (ros::Time::now() - plan_start_time).toSec());
-        const ros::Duration wait_time(
-          this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec());
-        wait_time.sleep();
 
-        return GenerateTrajectory(terminus);
+        const double wait_time = 
+          this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec();
+        if (wait_time > 0.0) {
+          const ros::Duration wait_duration(wait_time);
+          wait_duration.sleep();
+         }
+
+        most_recent_traj_ = GenerateTrajectory(terminus);
+	return most_recent_traj_;
       }
     }
 
@@ -314,6 +350,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       const S neighbor_state(neighbor);
 
       // Compute the time at which we'll reach this neighbor.
+      constexpr double kStayPutTime = 1.0;
       const double best_neigh_time =
           (neighbor.isApprox(next->point_.Configuration(), 1e-8))
               ? kStayPutTime

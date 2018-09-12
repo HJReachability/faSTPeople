@@ -88,7 +88,6 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
       throw std::runtime_error("Invalid occupancy grid data! Total probability: " +
         std::to_string(total_probability));
     }
-
   }
 
   // Make sure we have at least one occupancy grid.
@@ -150,7 +149,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   }
 
   // Linearly interpolate in time.
-  const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
+  const double hi_fraction = (time - lo->first) /
+    std::max(constants::kEpsilon, hi->first - lo->first);
   return hi_fraction * hi_prob + (1.0 - hi_fraction) * lo_prob;
 }
 
@@ -194,7 +194,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   for (size_t ii = lower_idx_2d.first; ii <= upper_idx_2d.first; ii++) {
     for (size_t jj = lower_idx_2d.second; jj <= upper_idx_2d.second; jj++) {
       // Convert from 2D index to 1D index, and get the probability at the current point.
-      const double prob = lo->second.data[FlattenIndex(std::make_pair(ii, jj), lo->second.num_cells_y)];
+      const double prob =
+	lo->second.data[FlattenIndex(std::make_pair(ii, jj), lo->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
         throw std::runtime_error("Invalid probability encountered: " +
                                  std::to_string(prob));
@@ -222,7 +223,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   for (size_t ii = lower_idx_2d.first; ii <= upper_idx_2d.first; ii++) {
     for (size_t jj = lower_idx_2d.second; jj <= upper_idx_2d.second; jj++) {
       // Convert from 2D index to 1D index, and get the probability at the current point.
-      const double prob = hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
+      const double prob =
+	hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
         throw std::runtime_error("Invalid probability encountered: " +
                                  std::to_string(prob));
@@ -237,7 +239,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
                              std::to_string(hi_prob));
 
   // Linearly interpolate in time.
-  const double hi_fraction = (time - lo->first) / (hi->first - lo->first);
+  const double hi_fraction = (time - lo->first) /
+    std::max(constants::kEpsilon, hi->first - lo->first);
   if (hi_fraction < 0.0 || hi_fraction > 1.0) {
     throw std::runtime_error("Invalid interpolation fraction: " +
                              std::to_string(hi_fraction));

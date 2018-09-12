@@ -25,6 +25,9 @@
   <!-- Maximum planning runtime (sec). -->
   <arg name="max_runtime" default="0.09" />
 
+  <!-- Replanning dt. -->
+  <arg name="replan_dt" default="$(arg max_runtime)" />
+
   <!-- State space bounds [x, y, z, vx, vy, vz].
        NOTE! These should agree with the upper and lower environment bounds. -->
   <arg name="state_upper" default="[10.0, 10.0, 10.0, 10.0, 10.0, 10.0]" />
@@ -55,6 +58,7 @@
     <rosparam param="srv/other_bounds" subst_value="True">$(arg other_bound_srvs)</rosparam>
 
     <param name="max_runtime" value="$(arg max_runtime)" />
+    <param name="timer/dt" value="$(arg replan_dt)" />
 
     <param name="frame/fixed" value="$(arg fixed_frame)" />
 
