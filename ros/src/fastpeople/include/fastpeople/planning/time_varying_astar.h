@@ -221,6 +221,12 @@ class TimeVaryingAStar : public KinematicPlanner<S, E, B, SB> {
   
   // Mutex lock.
   mutable std::mutex mutex_;
+
+  // ======== METRICS ======= //
+  mutable double summed_planning_times_;
+  mutable double num_planning_calls_;
+  // ======== METRICS ======= //
+
 };  //\class TimeVaryingAStar
 
 // --------------------------- IMPLEMENTATION ------------------------------- //
@@ -233,6 +239,10 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
                                                   double start_time) const {
   // Lock the mutex for the entire duration of this planning invocation.
   std::lock_guard<std::mutex> lock(mutex_);
+
+  // ======== METRICS ======= //
+  //num_planning_calls_ += 1.0;
+  // ======== METRICS ======= //
 
   const ros::Time plan_start_time = ros::Time::now();
 
@@ -281,6 +291,14 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
       ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
       most_recent_traj_ = backup_traj;
+
+      // ======== METRICS ======= //
+      //double total_time = (ros::Time::now() - plan_start_time).toSec();
+      //summed_planning_times_ += total_time;
+      //double avg_planning_time = summed_planning_times_/num_planning_calls_;
+      //ROS_INFO("%s: (ran out of time) Avg Planning Time: %f", this->name_.c_str(), avg_planning_time);
+      // ======== METRICS ======= //
+
       return most_recent_traj_;
     }
 
@@ -292,6 +310,12 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
     if (open.empty()) {
       ROS_ERROR_THROTTLE(1.0, "%s: Open list is empty.", this->name_.c_str());
       most_recent_traj_ = backup_traj;
+      // ======== METRICS ======= //
+      //double total_time = (ros::Time::now() - plan_start_time).toSec();
+      //summed_planning_times_ += total_time;
+      //double avg_planning_time = summed_planning_times_/num_planning_calls_;
+      //ROS_INFO("%s: (open list empty) Avg Planning Time: %f", this->name_.c_str(), avg_planning_time);
+      // ======== METRICS ======= //
       return most_recent_traj_;
     }
 
@@ -326,6 +350,14 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
         ROS_WARN("%s: Collision check failure adding terminus.",
                 this->name_.c_str());
       } else {
+
+        // ======== METRICS ======= //
+        //double total_time = (ros::Time::now() - plan_start_time).toSec();
+        //summed_planning_times_ += total_time;
+        //double avg_planning_time = summed_planning_times_/num_planning_calls_;
+        //ROS_INFO("%s: (full replan) Avg Planning Time: %f", this->name_.c_str(), avg_planning_time);
+        // ======== METRICS ======= //
+
         // Wait until planning time has elapsed before returning.
         ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
                  (ros::Time::now() - plan_start_time).toSec());
@@ -338,7 +370,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
          }
 
         most_recent_traj_ = GenerateTrajectory(terminus);
-	return most_recent_traj_;
+	      return most_recent_traj_;
       }
     }
 
