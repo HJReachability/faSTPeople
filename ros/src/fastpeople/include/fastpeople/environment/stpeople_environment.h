@@ -66,6 +66,7 @@
 namespace fastrack {
 namespace environment {
 
+using bound::TrackingBound;
 using bound::Box;
 using trajectory::Trajectory;
 
@@ -80,8 +81,8 @@ class STPeopleEnvironment
 
   // Derived classes must provide a collision checker which returns true if
   // and only if the provided position is a valid collision-free configuration.
-  // Provide a separate collision check for each type of tracking error bound.
-  bool IsValid(const Vector3d& position, const Box& bound, double time) const;
+  bool IsValid(const Vector3d& position, const TrackingBound& bound,
+	       double time) const;
 
   // Returns just the noisy-OR'd collision probability with the humans.
   double HumanCollisionProbability(const Vector3d& position, 
@@ -162,7 +163,8 @@ class STPeopleEnvironment
 // and only if the provided position is a valid collision-free configuration.
 // Provide a separate collision check for each type of tracking error bound.
 template <typename S>
-bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
+bool STPeopleEnvironment<S>::IsValid(const Vector3d& position,
+				     const TrackingBound& bound,
                                      double time) const {
   // Lock mutex. When this goes out of scope it will unlock.
   std::lock_guard<std::mutex> lock(occupancy_grid_mutex_);
@@ -174,10 +176,8 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     return false;
   }
 
-  // check against the boundary of the occupancy grid
-  if (position(0) < lower_(0) + bound.x || position(0) > upper_(0) - bound.x ||
-      position(1) < lower_(1) + bound.y || position(1) > upper_(1) - bound.y ||
-      position(2) < lower_(2) + bound.z || position(2) > upper_(2) - bound.z)
+  // Check against the boundary of the occupancy grid.
+  if (!bound.ContainedWithinBox(position, this->lower_, this->upper_))
     return false;
 
   // Collision checking with other robots.
@@ -193,10 +193,9 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
     const Vector3d other_position = traj_pt.Position();
 
     // Check if the TEBs do not intersect.
-    const bool in_collision =
-        (std::abs(position(0) - other_position(0)) < (bound.x + teb.x)) &&
-        (std::abs(position(1) - other_position(1)) < (bound.y + teb.y)) &&
-        (std::abs(position(2) - other_position(2)) < (bound.z + teb.z));
+    const bool in_collision = bound.OverlapsBox(position,
+      other_position - Vector3d(teb.x, teb.y, teb.z),
+      other_position + Vector3d(teb.x, teb.y, teb.z));
 
     if (in_collision) return false;
   }
@@ -207,10 +206,16 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position, const Box& bound,
   for (const auto& pair : occupancy_grid_registry_) {
     const OccupancyGridTimeInterpolator& interpolator = pair.second;
 
+    // Dynamically reinterpret base class reference as pointer to Box.
+    const Box* bound_box_ptr = dynamic_cast<const Box*>(&bound);
+    if (!bound_box_ptr) {
+      throw std::runtime_error("Can only handle Box tracking bounds.");
+    }
+    
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
     const double integrated_prob =
-        interpolator.OccupancyProbability(position, bound, time);
+      interpolator.OccupancyProbability(position, *bound_box_ptr, time);
     constexpr double kSmallNumber = 1e-8;
     if (integrated_prob > 1.0 + kSmallNumber ||
         integrated_prob < -kSmallNumber) {
