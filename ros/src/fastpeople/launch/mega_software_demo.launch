@@ -29,23 +29,6 @@
       <arg name="other_traj_topics" value="[]" />
       <arg name="other_bound_srvs" value="[]" />
 
-      <!--<arg name="goal_x" default="-3.0" />
-      <arg name="goal_y" default="-5.0" />
-      <arg name="goal_z" default="1.0" />
-
-      <arg name="takeoff_hover_x" default="0.0" />
-      <arg name="takeoff_hover_y" default="0.0" />
-      <arg name="takeoff_hover_z" default="1.0" />
-
-      <arg name="merger_mode" default="$(arg merger_mode)" />
-
-      <arg name="env_upper_x" default="5.0" />
-      <arg name="env_upper_y" default="7.0" />
-      <arg name="env_upper_z" default="2.0" />
-      <arg name="env_lower_x" default="-5.0" />
-      <arg name="env_lower_y" default="-6.0" />
-      <arg name="env_lower_z" default="0.0" />-->
-
       <arg name="goal_x" default="2.0" />
       <arg name="goal_y" default="-7.0" />
       <arg name="goal_z" default="1.0" />
@@ -99,21 +82,21 @@
       <arg name="other_traj_topics" value="[/traj$(arg robot1), /traj$(arg robot2)]" />
       <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2)]" />
 
-      <arg name="goal_x" default="12.0" />
-      <arg name="goal_y" default="0.0" />
+      <arg name="goal_x" default="6.0" />
+      <arg name="goal_y" default="-4.0" />
       <arg name="goal_z" default="1.0" /> 
 
-      <arg name="takeoff_hover_x" default="-8.0" />
-      <arg name="takeoff_hover_y" default="0.0" />
+      <arg name="takeoff_hover_x" default="14.0" />
+      <arg name="takeoff_hover_y" default="1.0" />
       <arg name="takeoff_hover_z" default="1.0" />
 
       <arg name="merger_mode" default="$(arg merger_mode)" />
 
       <arg name="env_upper_x" default="15.0" />
-      <arg name="env_upper_y" default="4.0" />
+      <arg name="env_upper_y" default="2.0" />
       <arg name="env_upper_z" default="2.0" />
-      <arg name="env_lower_x" default="-10.0" />
-      <arg name="env_lower_y" default="-2.0" />
+      <arg name="env_lower_x" default="4.0" />
+      <arg name="env_lower_y" default="-10.0" />
       <arg name="env_lower_z" default="0.0" />
     </include>
   </group>  
@@ -125,20 +108,20 @@
       <arg name="other_traj_topics" value="[/traj$(arg robot1), /traj$(arg robot2), /traj$(arg robot3)]" />
       <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2), /bound$(arg robot3)]" />
 
-      <arg name="goal_x" default="2.0" />
-      <arg name="goal_y" default="6.0" />
+      <arg name="goal_x" default="13.0" />
+      <arg name="goal_y" default="-9.0" />
       <arg name="goal_z" default="1.0" /> 
 
       <arg name="takeoff_hover_x" default="5.0" />
-      <arg name="takeoff_hover_y" default="-9.0" />
+      <arg name="takeoff_hover_y" default="1.0" />
       <arg name="takeoff_hover_z" default="1.0" />
 
       <arg name="merger_mode" default="$(arg merger_mode)" />
 
-      <arg name="env_upper_x" default="7.0" />
-      <arg name="env_upper_y" default="7.0" />
+      <arg name="env_upper_x" default="15.0" />
+      <arg name="env_upper_y" default="2.0" />
       <arg name="env_upper_z" default="2.0" />
-      <arg name="env_lower_x" default="0.0" />
+      <arg name="env_lower_x" default="4.0" />
       <arg name="env_lower_y" default="-10.0" />
       <arg name="env_lower_z" default="0.0" />
     </include>
@@ -152,19 +135,19 @@
       <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2), /bound$(arg robot3), /bound$(arg robot4)]" />
 
       <arg name="goal_x" default="14.0" />
-      <arg name="goal_y" default="-2.0" />
+      <arg name="goal_y" default="-3.0" />
       <arg name="goal_z" default="1.0" /> 
 
-      <arg name="takeoff_hover_x" default="10.0" />
-      <arg name="takeoff_hover_y" default="-9.0" />
+      <arg name="takeoff_hover_x" default="6.0" />
+      <arg name="takeoff_hover_y" default="-7.0" />
       <arg name="takeoff_hover_z" default="1.0" />
 
       <arg name="merger_mode" default="$(arg merger_mode)" />
 
       <arg name="env_upper_x" default="15.0" />
-      <arg name="env_upper_y" default="0.0" />
+      <arg name="env_upper_y" default="2.0" />
       <arg name="env_upper_z" default="2.0" />
-      <arg name="env_lower_x" default="8.0" />
+      <arg name="env_lower_x" default="4.0" />
       <arg name="env_lower_y" default="-10.0" />
       <arg name="env_lower_z" default="0.0" />
     </include>
