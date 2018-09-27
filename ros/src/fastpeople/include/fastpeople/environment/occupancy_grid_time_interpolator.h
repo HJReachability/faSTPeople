@@ -77,6 +77,10 @@ class OccupancyGridTimeInterpolator {
     double resolution;
     size_t num_cells_x;
     size_t num_cells_y;
+    double lower_x;
+    double upper_x;
+    double lower_y;
+    double upper_y;
   };  //\struct OccupancyGrid
 
   // Get the 2D grid index of the cell which includes the given point.

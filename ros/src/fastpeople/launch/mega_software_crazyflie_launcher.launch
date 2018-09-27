@@ -7,7 +7,7 @@
   <!-- Probabilistic planning params. -->
   <arg name="collision_threshold" default="0.1" />
   <arg name="collision_check_resolution" default="0.1" />
-  <arg name="grid_resolution" default="0.5" />
+  <arg name="grid_resolution" default="0.7" />
 
   <!-- Topics. -->
   <arg name="position_velocity_yaw_state_topic" default="/state/position_velocity_yaw$(arg suffix)" />
@@ -27,7 +27,7 @@
   <arg name="takeoff_control_topic" default="/control/takeoff$(arg suffix)" />
   <arg name="final_control_topic" default="/control/final$(arg suffix)" />
 
-  <arg name="other_occupancy_grid_topics" default="[/occupancy_grid_time1, /occupancy_grid_time2]" />
+  <arg name="other_occupancy_grid_topics" default="[/occupancy_grid_time1, /occupancy_grid_time2, /occupancy_grid_time3, /occupancy_grid_time4, /occupancy_grid_time5, /occupancy_grid_time6, /occupancy_grid_time7, /occupancy_grid_time8, /occupancy_grid_time9, /occupancy_grid_time10]" />
   <arg name="sensor_topic" default="/sensor$(arg suffix)" />
   <arg name="updated_env_topic" default="/updated_env$(arg suffix)" />
   <arg name="sensor_vis_topic" default="/vis/sensor$(arg suffix)" />
@@ -68,10 +68,10 @@
   <arg name="sim_init_z" default="0.0" />
 
   <!-- Planner params. -->
-  <arg name="planner_vx" default="0.2" />
-  <arg name="planner_vy" default="0.2" />
-  <arg name="planner_vz" default="0.2" />
-  <arg name="planner_runtime" default="0.1" /> 
+  <arg name="planner_vx" default="0.25" />
+  <arg name="planner_vy" default="0.25" />
+  <arg name="planner_vz" default="0.25" />
+  <arg name="planner_runtime" default="0.3" /> 
 
   <!-- Tracker params. -->
   <arg name="tracker_upper_pitch" default="0.2" />
@@ -106,11 +106,11 @@
 
   <!-- Environment parameters and state space bounds. -->
   <arg name="vel_max" default="10.0" />
-  <arg name="env_upper_x" default="1.66" />
-  <arg name="env_upper_y" default="2.62" />
+  <arg name="env_upper_x" default="15.0" />
+  <arg name="env_upper_y" default="10.0" />
   <arg name="env_upper_z" default="2.0" />
-  <arg name="env_lower_x" default="-2.0" />
-  <arg name="env_lower_y" default="-1.04" />
+  <arg name="env_lower_x" default="-10.0" />
+  <arg name="env_lower_y" default="-10.0" />
   <arg name="env_lower_z" default="0.0" />
   <arg name="state_upper" default="[$(arg env_upper_x), $(arg env_upper_y), $(arg env_upper_z),
                                    $(arg vel_max), $(arg vel_max), $(arg vel_max)]" />

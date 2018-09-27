@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- Robot suffixes. -->
+  <arg name="robot1" default="HY4" />
+  <arg name="robot2" default="HY5" />
+  <arg name="robot3" default="HY6" />
+  <arg name="robot4" default="HY7" />
+  <arg name="robot5" default="HY8" />
+
+  <!-- Merger mode. -->
+  <arg name="merger_mode" default="PRIORITIZED" />
+
+  <!-- Record? -->
+  <arg name="record" default="false" />
+
+  <!-- Record a rosbag. -->
+  <node pkg="rosbag"
+	type="record"
+	name="recorder"
+	args="-a -o $(find fastpeople)/bagfiles/sw_demo_recording.bag"
+	if="$(arg record)">
+  </node>
+
+  <!-- ========================== Robot 1. ========================== -->
+  <group ns="$(arg robot1)">
+    <include file="$(find fastpeople)/launch/mega_software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot1)" />
+      <arg name="other_traj_topics" value="[]" />
+      <arg name="other_bound_srvs" value="[]" />
+
+      <arg name="goal_x" default="2.0" />
+      <arg name="goal_y" default="-7.0" />
+      <arg name="goal_z" default="1.0" />
+
+      <arg name="takeoff_hover_x" default="-1.0" />
+      <arg name="takeoff_hover_y" default="-1.0" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+
+      <arg name="env_upper_x" default="5.0" />
+      <arg name="env_upper_y" default="3.0" />
+      <arg name="env_upper_z" default="2.0" />
+      <arg name="env_lower_x" default="-3.0" />
+      <arg name="env_lower_y" default="-9.0" />
+      <arg name="env_lower_z" default="0.0" />
+    </include>
+  </group>
+
+  <!-- ========================== Robot 2. ========================== -->
+  <group ns="$(arg robot2)">
+    <include file="$(find fastpeople)/launch/mega_software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot2)" />
+      <arg name="other_traj_topics" value="[/traj$(arg robot1)]" />
+      <arg name="other_bound_srvs" value="[/bound$(arg robot1)]" />
+
+      <arg name="goal_x" default="7.0" />
+      <arg name="goal_y" default="5.0" />
+      <arg name="goal_z" default="1.0" /> 
+
+      <arg name="takeoff_hover_x" default="-3.0" />
+      <arg name="takeoff_hover_y" default="8.0" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+
+      <arg name="env_upper_x" default="13.0" />
+      <arg name="env_upper_y" default="10.0" />
+      <arg name="env_upper_z" default="2.0" />
+      <arg name="env_lower_x" default="-5.0" />
+      <arg name="env_lower_y" default="4.0" />
+      <arg name="env_lower_z" default="0.0" />
+    </include>
+  </group> 
+
+
+  <!-- ========================== Robot 3. ========================== -->
+  <group ns="$(arg robot3)">
+    <include file="$(find fastpeople)/launch/mega_software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot3)" />
+      <arg name="other_traj_topics" value="[/traj$(arg robot1), /traj$(arg robot2)]" />
+      <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2)]" />
+
+      <arg name="goal_x" default="6.0" />
+      <arg name="goal_y" default="-4.0" />
+      <arg name="goal_z" default="1.0" /> 
+
+      <arg name="takeoff_hover_x" default="14.0" />
+      <arg name="takeoff_hover_y" default="1.0" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+
+      <arg name="env_upper_x" default="15.0" />
+      <arg name="env_upper_y" default="2.0" />
+      <arg name="env_upper_z" default="2.0" />
+      <arg name="env_lower_x" default="4.0" />
+      <arg name="env_lower_y" default="-10.0" />
+      <arg name="env_lower_z" default="0.0" />
+    </include>
+  </group>  
+
+  <!-- ========================== Robot 4. ========================== -->
+  <group ns="$(arg robot4)">
+    <include file="$(find fastpeople)/launch/mega_software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot4)" />
+      <arg name="other_traj_topics" value="[/traj$(arg robot1), /traj$(arg robot2), /traj$(arg robot3)]" />
+      <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2), /bound$(arg robot3)]" />
+
+      <arg name="goal_x" default="13.0" />
+      <arg name="goal_y" default="-9.0" />
+      <arg name="goal_z" default="1.0" /> 
+
+      <arg name="takeoff_hover_x" default="5.0" />
+      <arg name="takeoff_hover_y" default="1.0" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+
+      <arg name="env_upper_x" default="15.0" />
+      <arg name="env_upper_y" default="2.0" />
+      <arg name="env_upper_z" default="2.0" />
+      <arg name="env_lower_x" default="4.0" />
+      <arg name="env_lower_y" default="-10.0" />
+      <arg name="env_lower_z" default="0.0" />
+    </include>
+  </group> 
+
+  <!-- ========================== Robot 4. ========================== -->
+  <group ns="$(arg robot5)">
+    <include file="$(find fastpeople)/launch/mega_software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot5)" />
+      <arg name="other_traj_topics" value="[/traj$(arg robot1), /traj$(arg robot2), /traj$(arg robot3), /traj$(arg robot4)]" />
+      <arg name="other_bound_srvs" value="[/bound$(arg robot1), /bound$(arg robot2), /bound$(arg robot3), /bound$(arg robot4)]" />
+
+      <arg name="goal_x" default="14.0" />
+      <arg name="goal_y" default="-3.0" />
+      <arg name="goal_z" default="1.0" /> 
+
+      <arg name="takeoff_hover_x" default="6.0" />
+      <arg name="takeoff_hover_y" default="-7.0" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+
+      <arg name="env_upper_x" default="15.0" />
+      <arg name="env_upper_y" default="2.0" />
+      <arg name="env_upper_z" default="2.0" />
+      <arg name="env_lower_x" default="4.0" />
+      <arg name="env_lower_y" default="-10.0" />
+      <arg name="env_lower_z" default="0.0" />
+    </include>
+  </group> 
+
+</launch>

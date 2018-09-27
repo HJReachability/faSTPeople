@@ -35,6 +35,7 @@
   <arg name="updated_env_topic" default="/updated_env$(arg suffix)" />
   <arg name="sensor_vis_topic" default="/vis/sensor$(arg suffix)" />
   <arg name="traj_vis_topic" default="/vis/traj$(arg suffix)" />
+  <arg name="goal_vis_topic" default="/vis/goal$(arg suffix)" />
   <arg name="bound_vis_topic" default="/vis/bound$(arg suffix)" />
   <arg name="known_env_vis_topic" default="/vis/known_env$(arg suffix)" />
   <arg name="true_env_vis_topic" default="/vis/true_env$(arg suffix)" />
@@ -71,10 +72,24 @@
   <arg name="sim_init_z" default="0.0" />
 
   <!-- Planner params. -->
-  <arg name="planner_vx" default="0.3" />
-  <arg name="planner_vy" default="0.3" />
-  <arg name="planner_vz" default="0.3" />
-  <arg name="planner_runtime" default="0.05" />
+  <arg name="planner_vx" default="0.2" />
+  <arg name="planner_vy" default="0.2" />
+  <arg name="planner_vz" default="0.2" />
+  <arg name="planner_runtime" default="0.1" />
+
+  <!-- Tracker params. -->
+  <arg name="tracker_upper_pitch" default="0.2" />
+  <arg name="tracker_upper_roll" default="0.2" />
+  <arg name="tracker_upper_thrust" default="11.81" />
+  <arg name="tracker_lower_thrust" default="7.81" />
+
+  <!-- Disturbance params. -->
+  <arg name="disturbance_vx" default="0.4" />
+  <arg name="disturbance_vy" default="0.4" />
+  <arg name="disturbance_vz" default="0.4" />
+  <arg name="disturbance_ax" default="0.1" />
+  <arg name="disturbance_ay" default="0.1" />
+  <arg name="disturbance_az" default="0.1" />
 
   <!-- Time steps. -->
   <arg name="simulator_dt" default="0.001" />
@@ -120,6 +135,16 @@
     <arg name="planner_vx" value="$(arg planner_vx)" />
     <arg name="planner_vy" value="$(arg planner_vy)" />
     <arg name="planner_vz" value="$(arg planner_vz)" />
+    <arg name="tracker_upper_pitch" value="$(arg tracker_upper_pitch)" />
+    <arg name="tracker_upper_roll" value="$(arg tracker_upper_roll)" />
+    <arg name="tracker_upper_thrust" value="$(arg tracker_upper_thrust)" />
+    <arg name="tracker_lower_thrust" value="$(arg tracker_lower_thrust)" />
+    <arg name="disturbance_vx" value="$(arg disturbance_vx)" />
+    <arg name="disturbance_vy" value="$(arg disturbance_vy)" />
+    <arg name="disturbance_vz" value="$(arg disturbance_vz)" />
+    <arg name="disturbance_ax" value="$(arg disturbance_ax)" />
+    <arg name="disturbance_ay" value="$(arg disturbance_ay)" />
+    <arg name="disturbance_az" value="$(arg disturbance_az)" />
   </include>
 
   <!-- Planner. -->
@@ -156,7 +181,7 @@
     <arg name="updated_env_topic" value="$(arg updated_env_topic)" />
     <arg name="ref_topic" value="$(arg fastrack_reference_state_topic)" />
     <arg name="traj_vis" value="$(arg traj_vis_topic)" />
-    <arg name="bound_vis" value="$(arg bound_vis_topic)" />
+    <arg name="goal_vis" value="$(arg goal_vis_topic)" />
     <arg name="fixed_frame" value="$(arg fixed_frame)" />
     <arg name="planner_frame" value="$(arg planner_frame)" />
     <arg name="planner_runtime" value="$(arg planner_runtime)" />

@@ -75,7 +75,8 @@ class STPeopleEnvironment
  public:
   ~STPeopleEnvironment() {}
   explicit STPeopleEnvironment()
-      : Environment<crazyflie_human::OccupancyGridTime, Empty>() {}
+      : Environment<crazyflie_human::OccupancyGridTime, Empty>(),
+        been_updated_(false) {}
 
   // Derived classes must provide a collision checker which returns true if
   // and only if the provided position is a valid collision-free configuration.
@@ -102,6 +103,17 @@ class STPeopleEnvironment
   // Register callbacks. This should still call Environment::RegisterCallbacks.
   bool RegisterCallbacks(const ros::NodeHandle& n);
 
+  // Timer callback.
+  // NOTE: rather than replanning every time we get new sensor data, we'll mark
+  // the environment as updated and thereby request a replan only on a timer.
+  // This will help us to manage computational complexity a little better.
+  void TimerCallback(const ros::TimerEvent& e) {
+    if (been_updated_) {
+      this->updated_pub_.publish(std_msgs::Empty());
+      been_updated_ = false;
+    }
+  }
+
   // Base class sensor callback. Not implemented in favor of custom callbacks
   // for each occupancy grid callback and trajectory callback.
   void SensorCallback(const crazyflie_human::OccupancyGridTime::ConstPtr& msg);
@@ -114,6 +126,11 @@ class STPeopleEnvironment
   void OccupancyGridCallback(
       const crazyflie_human::OccupancyGridTime::ConstPtr& msg,
       const std::string& topic);
+
+  // Timer.
+  ros::Timer timer_;
+  double timer_dt_;
+  bool been_updated_;
 
   // Topics on which agent trajectories will be published.
   std::vector<std::string> traj_topics_;
@@ -254,6 +271,9 @@ bool STPeopleEnvironment<S>::LoadParameters(const ros::NodeHandle& n) {
     return false;
   if (!nl.getParam("collision_threshold", collision_threshold_)) return false;
 
+  // Load timer duration.
+  if (!nl.getParam("timer/dt", timer_dt_)) return false;
+
   // Services for loading other tracking error bounds.
   std::vector<std::string> other_bound_srvs_name;
   if (!nl.getParam("srv/other_bounds", other_bound_srvs_name)) return false;
@@ -293,6 +313,10 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
 
   ros::NodeHandle nl(n);
 
+  // Make a timer.
+  timer_ = nl.createTimer(ros::Duration(timer_dt_),
+    &STPeopleEnvironment<S>::TimerCallback, this);
+
   // Set up all the trajectory subscribers.
   for (const auto& topic : traj_topics_) {
     // Generate a lambda function for this callback.
@@ -319,7 +343,7 @@ bool STPeopleEnvironment<S>::RegisterCallbacks(const ros::NodeHandle& n) {
         };  // callback
 
     // Create a new subscriber with this callback.
-    traj_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
+    occupancy_grid_subs_.emplace_back(nl.subscribe<crazyflie_human::OccupancyGridTime>(
         topic, 1, boost::bind(callback, _1, topic)));
   }
 
@@ -352,8 +376,8 @@ void STPeopleEnvironment<S>::TrajectoryCallback(
     iter->second = Trajectory<S>(msg);
   }
 
-  // Let the system know this environment has been updated.
-  this->updated_pub_.publish(std_msgs::Empty());
+  // Mark as updated.
+  been_updated_ = true;
 }
 
 // Generic callback to handle a new occupancy grid msg on the given topic.
@@ -377,9 +401,9 @@ void STPeopleEnvironment<S>::OccupancyGridCallback(
       topic,
       OccupancyGridTimeInterpolator(msg, this->lower_(0), this->upper_(0),
                                     this->lower_(1), this->upper_(1)));
-
-  // Let the system know this environment has been updated.
-  this->updated_pub_.publish(std_msgs::Empty());
+  
+  // Mark as updated.
+  been_updated_ = true;
 }
 
 // Derived classes must have some sort of visualization through RViz.
