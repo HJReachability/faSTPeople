@@ -124,7 +124,9 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
                              std::to_string(lo_prob));
   }
 
-  // If 'hi' is not a valid iterator, then just return what we have.
+  // If 'hi' is not a valid iterator, then just return zero.
+  // Note that we could also return the probability of collision
+  // at this position at the last predicted time step. 
   if (hi == occupancy_grids_.end()) {
     ROS_WARN_THROTTLE(
         2.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
@@ -210,7 +212,9 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
                              std::to_string(lo_prob));
   }
 
-  // If 'hi' is not a valid iterator, then just return what we have.
+  // If 'hi' is not a valid iterator, then just return zero probability.
+  // Note that we could also return the integrated probability of collision 
+  // at the last predicted time step.   
   if (hi == occupancy_grids_.end()) {
     ROS_WARN_THROTTLE(
         1.0, "OccupancyGridTimeInterpolator: interpolation time is too late.");
@@ -224,7 +228,7 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
     for (size_t jj = lower_idx_2d.second; jj <= upper_idx_2d.second; jj++) {
       // Convert from 2D index to 1D index, and get the probability at the current point.
       const double prob =
-	hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
+	      hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
         throw std::runtime_error("Invalid probability encountered: " +
                                  std::to_string(prob));
