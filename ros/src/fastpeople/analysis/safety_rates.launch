@@ -1,0 +1,30 @@
+<!-- Launch file for empirical safety rate analysis
+
+This file plays launches the safety_rates node-->
+
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="bag_name" default= "_.bag"/>
+  <arg name="path" default="~/data/rosbags/"/>
+
+  <!-- Software demo for live human trajectory -->
+  <include file="$(find fastrack_crazyflie_demos)/launch/software_demo.launch">
+    <!--<arg name="fastrack_control_topic" value="$(arg fastrack_control_topic)" />
+    <arg name="converted_control_topic" value="$(arg prioritized_control_topic)" /> -->  
+  </include>
+  <!-- TODO: We need to ensure the safety_rates node can access plans! -->
+  
+  <!-- Play ROS bag -->
+  <node pkg="rosbag"
+    type="play"
+    name="bag_player"
+    args="--clock $(arg path)$(arg bag_name)">
+  </node>
+
+  <!-- Safety Rate Analysis Node -->
+  <node pkg="fastpeople_analysis"
+    type="safety_rates"
+    name="safety_rates_analyzer"
+    args="">
+  </node>
