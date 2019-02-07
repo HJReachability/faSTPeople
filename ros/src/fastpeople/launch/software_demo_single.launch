@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- Robot suffixes. -->
+  <arg name="robot1" default="HY4" />
+
+  <!-- Merger mode. -->
+  <arg name="merger_mode" default="PRIORITIZED" />
+
+  <!-- Record? -->
+  <arg name="record" default="false" />
+
+  <!-- Record a rosbag. -->
+  <node pkg="rosbag"
+	type="record"
+	name="recorder"
+	args="-a -o $(find fastpeople)/bagfiles/sw_demo_recording.bag"
+	if="$(arg record)">
+  </node>
+
+  <!-- ========================== Robot 1. ========================== -->
+  <group ns="$(arg robot1)">
+    <include file="$(find fastpeople)/launch/software_crazyflie_launcher.launch">
+      <arg name="suffix" value="$(arg robot1)" />
+      <arg name="other_traj_topics" value="[]" />
+      <arg name="other_bound_srvs" value="[]" />
+
+      <arg name="goal_x" default="1.38" />
+      <arg name="goal_y" default="1.75" />
+      <arg name="goal_z" default="1.0" />
+
+      <arg name="takeoff_hover_x" default="0.75" />
+      <arg name="takeoff_hover_y" default="-0.66" />
+      <arg name="takeoff_hover_z" default="1.0" />
+
+      <arg name="merger_mode" default="$(arg merger_mode)" />
+    </include>
+  </group>
+
+</launch>

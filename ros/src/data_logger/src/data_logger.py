@@ -143,33 +143,26 @@ class DataLogger(object):
         self._human_sub = rospy.Subscriber(self._human_topic,
                                            geometry_msgs.msg.PoseStamped,
                                            self.HumanCallback)
-        #self._human_sub = rospy.Subscriber(self._human_topic,
-        #                                   geometry_msgs.msg.TransformStamped,
-        #                                   self.HumanCallback)
 
         self._robot_sub = rospy.Subscriber(self._robot_topic,
                                            crazyflie_msgs.msg.PositionVelocityYawStateStamped,
                                            self.RobotCallback)
 
-        #self._traj_request_sub = rospy.Subscriber(self._traj_request_topic,
-        #                                          fastrack_msgs.msg.TrajectoryRequest,
-        #                                          self.TrajectoryRequestCallback)
+        self._traj_request_sub = rospy.Subscriber(self._traj_request_topic,
+                                                  fastrack_msgs.msg.ReplanRequest,
+                                                  self.TrajectoryRequestCallback)
 
         # Timer.
-        self._timer = rospy.Timer(rospy.Duration(self._time_step),
-                                  self.TimerCallback)
+        self._timer = rospy.Timer(rospy.Duration(self._time_step), self.TimerCallback)
 
         return True
 
     # Update robot position.
     def RobotCallback(self, msg):
         if not self._initialized:
+            print "In RobotCallback: not initialized."
             return
 
-        # Unpack msg.
-#        position = np.array([msg.transform.translation.x,
-#                                         msg.transform.translation.y,
-#                                         msg.transform.translation.z])
         position = np.array([msg.state.x, msg.state.y, msg.state.z])
 
         if self._robot_position is None:
@@ -180,8 +173,7 @@ class DataLogger(object):
             dt = (msg.header.stamp - self._robot_time).to_sec()
             velocity = (position - self._robot_position) / dt
 
-            self._robot_velocity = (velocity * self._velocity_decay +
-                                    self._robot_velocity * (1.0 - self._velocity_decay))
+            self._robot_velocity = (velocity * self._velocity_decay + self._robot_velocity * (1.0 - self._velocity_decay))
             self._robot_position = position
             self._robot_time = msg.header.stamp
 
@@ -191,10 +183,6 @@ class DataLogger(object):
             print "In HumanCallback: not initialized."
             return
 
-        # Unpack msg.
-        #position = np.array([msg.transform.translation.x,
-        #                     msg.transform.translation.y,
-        #                     msg.transform.translation.z])
         position = np.array([msg.pose.position.x,
                              msg.pose.position.y,
                              msg.pose.position.z])
@@ -210,31 +198,29 @@ class DataLogger(object):
             # Update human velocity by a linear combination of the
             # new measured velocity and the old velocity. Weighting
             # is based on the velocity decay factor.
-            self._human_velocity = (velocity * self._velocity_decay +
-                                    self._human_velocity * (1.0 - self._velocity_decay))
+            self._human_velocity = (velocity * self._velocity_decay + self._human_velocity * (1.0 - self._velocity_decay))
             self._human_position = position
             self._human_time = msg.header.stamp
 
     # Trajectory request callback.
     def TrajectoryRequestCallback(self, msg):
         if not self._initialized:
+            print "In TrajectoryRequestCallback: not initialized."
             return
 
         right_now = rospy.Time.now()
+        print msg
+        msg_goal = np.array([msg.goal.x, msg.goal.y, msg.goal.z])
 
         # Catch the first one.
         if self._start_time is None:
             self._start_time = right_now
-            self._stop_position = np.array([msg.stop_position.x,
-                                           msg.stop_position.y,
-                                           msg.stop_position.z])
+            self._stop_position = msg_goal
             return
 
         # Check if we've reached the goal. This will be true if the
         # msg goal is not the same as our current goal.
-        msg_goal = np.array([msg.stop_position.x,
-                             msg.stop_position.y,
-                             msg.stop_position.z])
+
         if np.linalg.norm(msg_goal - self._stop_position) > 1e-4:
             # Append to lists.
             self._traj_times.append((right_now - self._start_time).to_sec())
@@ -268,11 +254,10 @@ class DataLogger(object):
 
         # Log collision time.
         if self.Angle() < self._max_angle:
-            self._best_collision_time = min(self._best_collision_time,
-                                            self.CollisionTime())
+            self._best_collision_time = min(self._best_collision_time, self.CollisionTime())
 
         # Log distance.
-        print "Distance between human and robots: ", self.Distance()
+        print "Distance between human and robot: ", self.Distance()
         self._best_distance = min(self._best_distance, self.Distance())
 
         # Log positions.
@@ -303,8 +288,7 @@ class DataLogger(object):
 
         direction = self._human_position - self._robot_position
         velocity = self._human_velocity - self._robot_velocity
-        return np.linalg.norm(direction[:-1])**2 / \
-            np.dot(direction[:-1], velocity[:-1])
+        return np.linalg.norm(direction[:-1])**2 / np.dot(direction[:-1], velocity[:-1])
 
     # Save to disk.
     def Save(self):
@@ -327,7 +311,7 @@ class DataLogger(object):
             table[ii, 0] = self._min_collision_times[ii]
             table[ii, 1] = self._min_distances[ii]
             table[ii, 2] = self._traj_times[ii]
-
+        print "table: ", table
         # Save.
         #np.savetxt(self._metrics_file_name, table)
         #pickle.dump(self._raw_data, open(self._positions_file_name, "wb"))

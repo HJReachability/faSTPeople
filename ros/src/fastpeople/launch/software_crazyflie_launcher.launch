@@ -222,6 +222,7 @@
   <node name="simulator"
         pkg="crazyflie_simulator"
         type="near_hover_simulator_node"
+	required="True"
         output="screen">
 
     <param name="time_step" value="$(arg simulator_dt)" />
@@ -239,6 +240,7 @@
   <node name="position_velocity_yaw_state_estimator"
         pkg="crazyflie_state_estimator"
         type="position_velocity_yaw_state_estimator_node"
+	required="True"
         output="screen">
 
     <param name="x_dim" value="$(arg lqr_x_dim)" />
@@ -253,6 +255,7 @@
   <node name="position_velocity_state_estimator"
         pkg="crazyflie_state_estimator"
         type="position_velocity_state_estimator_node"
+	required="True"
         output="screen">
 
     <param name="x_dim" value="$(arg tracker_x_dim)" />
@@ -268,6 +271,7 @@
   <node name="lqr_controller"
         pkg="crazyflie_lqr"
         type="position_velocity_yaw_state_lift_lqr_node"
+	required="True"
         output="screen">
 
     <param name="x_dim" value="$(arg lqr_x_dim)" />
@@ -286,6 +290,7 @@
   <node name="merger"
         pkg="crazyflie_control_merger"
         type="regular_control_merger_node"
+	required="True"
         output="screen">
 
     <param name="mode" value="$(arg merger_mode)" />
@@ -301,6 +306,7 @@
   <node name="takeoff_server"
         pkg="crazyflie_takeoff"
         type="takeoff_server_node"
+	required="True"
         output="screen">
 
     <param name="topics/reference" value="$(arg reference_state_topic)" />
@@ -319,6 +325,7 @@
   <node name="takeoff_control_filter"
         pkg="crazyflie_takeoff"
         type="takeoff_control_filter_node"
+	required="True"
         output="screen">
 
     <param name="topics/takeoff_control" value="$(arg takeoff_control_topic)" />

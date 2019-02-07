@@ -279,7 +279,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
   // insert neighbors that are not already in the closed list.
   while (true) {
     // Check if we have run out of planning time.
-    if ((ros::Time::now() - plan_start_time).toSec() > this->max_runtime_) {
+    if ((ros::Time::now().toSec() - plan_start_time.toSec()) > this->max_runtime_) {
       ROS_ERROR("%s: Ran out of time.", this->name_.c_str());
       most_recent_traj_ = backup_traj;
 
@@ -330,10 +330,10 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
       } else {
         // Wait until planning time has elapsed before returning.
         ROS_INFO("%s: succeeded after %f seconds.", this->name_.c_str(),
-                 (ros::Time::now() - plan_start_time).toSec());
+                 (ros::Time::now().toSec() - plan_start_time.toSec()));
 
         const double wait_time = 
-          this->max_runtime_ - (ros::Time::now() - plan_start_time).toSec();
+          this->max_runtime_ - (ros::Time::now().toSec() - plan_start_time.toSec());
         if (wait_time > 0.0) {
           const ros::Duration wait_duration(wait_time);
           wait_duration.sleep();

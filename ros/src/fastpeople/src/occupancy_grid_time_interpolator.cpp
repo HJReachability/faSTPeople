@@ -245,7 +245,11 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   // Linearly interpolate in time.
   const double hi_fraction = (time - lo->first) /
     std::max(constants::kEpsilon, hi->first - lo->first);
-  if (hi_fraction < 0.0 || hi_fraction > 1.0) {
+  if (hi_fraction < 0.0) {
+    ROS_WARN_THROTTLE(1.0, 
+      "OccupancyGridTimeInterpolator: Interpolation time too early.");
+    return lo_prob;
+  } else if (hi_fraction > 1.0) {
     throw std::runtime_error("Invalid interpolation fraction: " +
                              std::to_string(hi_fraction));
   }
