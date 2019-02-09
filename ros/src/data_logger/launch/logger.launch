@@ -6,12 +6,13 @@
   <!-- Topics. -->
   <arg name="human_topic" default="/human_pose1" />
   <arg name="robot_topic" default="/state/position_velocity_yaw$(arg suffix)" />
-  <arg name="traj_request_topic" default="/request_traj$(arg suffix)" />
+  <arg name="traj_request_topic" default="/traj$(arg suffix)" />
 
   <!-- Logging params. -->
   <arg name="time_step" default="0.1" />
   <arg name="max_angle" default="0.25" />
   <arg name="velocity_decay" default="0.5" />
+  <arg name="metrics_file_name" default="single_human_experiment" />
 
   <!-- Data logger. -->
   <node name="data_logger"
@@ -26,5 +27,7 @@
     <param name="velocity_decay" value="$(arg velocity_decay)" />
     <param name="max_angle" value="$(arg max_angle)" />
     <param name="time_step" value="$(arg time_step)" />
+
+    <param name="metrics_file_name" value="$(arg metrics_file_name)" />
   </node>
 </launch>

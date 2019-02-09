@@ -46,6 +46,7 @@ import rospy
 import geometry_msgs.msg
 import fastrack_msgs.msg
 import crazyflie_msgs.msg
+import rospkg
 
 import numpy as np
 import cPickle as pickle
@@ -55,23 +56,20 @@ class DataLogger(object):
         self._intialized = False
 
         # Logged data.
-        self._traj_times = []
-
+        self._metrics_file_name = None
         self._min_collision_times = []
-        self._best_collision_time = float("inf")
-
         self._min_distances = []
-        self._best_distance = float("inf")
 
         # Also log the raw data as list of lists (sublists are single trajs,
         # each element of which is a dictionary with keys
         # {"human_position", "robot_position", "time"}).
-        self._raw_data = []
         self._current_traj_raw_data = []
 
-        # Start time and current goal of current trajectory.
+        # Start and end time and current goal of current trajectory.
         self._start_time = None
+        self._end_time = None
         self._current_goal = None
+        self._reached_goal = False
 
         # Human position and velocity.
         self._human_position = None
@@ -86,12 +84,6 @@ class DataLogger(object):
     # Initialization and loading parameters.
     def Initialize(self):
         self._name = rospy.get_name() + "/data_logger"
-
-        right_now = rospy.Time.now()
-
-        # Catch the first one.
-        if self._start_time is None:
-            self._start_time = right_now
 
         # Load parameters.
         if not self.LoadParameters():
@@ -136,6 +128,11 @@ class DataLogger(object):
             return False
         self._max_angle = rospy.get_param("~max_angle")
 
+        # File name where metrics data will be saved
+        if not rospy.has_param("~metrics_file_name"):
+            return False
+        self._metrics_file_name = rospy.get_param("~metrics_file_name")
+
         return True
 
     def RegisterCallbacks(self):
@@ -149,7 +146,7 @@ class DataLogger(object):
                                            self.RobotCallback)
 
         self._traj_request_sub = rospy.Subscriber(self._traj_request_topic,
-                                                  fastrack_msgs.msg.ReplanRequest,
+                                                  fastrack_msgs.msg.Trajectory,
                                                   self.TrajectoryRequestCallback)
 
         # Timer.
@@ -169,6 +166,11 @@ class DataLogger(object):
             self._robot_position = position
             self._robot_velocity = np.array([0.0, 0.0, 0.0])
             self._robot_time = msg.header.stamp
+
+            # Catch the first one.
+            right_now = rospy.Time.now()
+            if self._start_time is None:
+                self._start_time = right_now
         else:
             dt = (msg.header.stamp - self._robot_time).to_sec()
             velocity = (position - self._robot_position) / dt
@@ -176,6 +178,11 @@ class DataLogger(object):
             self._robot_velocity = (velocity * self._velocity_decay + self._robot_velocity * (1.0 - self._velocity_decay))
             self._robot_position = position
             self._robot_time = msg.header.stamp
+
+            # Check if we've reached the goal.
+            if not self._reached_goal and self._current_goal is not None and np.linalg.norm(self._robot_position - self._current_goal) < 5e-2:
+                self._reached_goal = True
+                self._end_time = self._robot_time
 
     # Update human position and velocity.
     def HumanCallback(self, msg):
@@ -208,36 +215,8 @@ class DataLogger(object):
             print "In TrajectoryRequestCallback: not initialized."
             return
 
-        right_now = rospy.Time.now()
-        print msg
-        msg_goal = np.array([msg.goal.x, msg.goal.y, msg.goal.z])
-
-        # Catch the first one.
-        if self._start_time is None:
-            self._start_time = right_now
-            self._stop_position = msg_goal
-            return
-
-        # Check if we've reached the goal. This will be true if the
-        # msg goal is not the same as our current goal.
-
-        if np.linalg.norm(msg_goal - self._stop_position) > 1e-4:
-            # Append to lists.
-            self._traj_times.append((right_now - self._start_time).to_sec())
-            self._min_collision_times.append(self._best_collision_time)
-            self._min_distances.append(self._best_distance)
-            self._raw_data.append(self._current_traj_raw_data)
-
-            # Update goal and start time for next trajectory.
-            self._stop_position = msg_goal
-            self._start_time = rospy.Time.now()
-
-            # Update best collision time and best distance.
-            self._best_collision_time = float("inf")
-            self._best_distance = float("inf")
-
-            # Update current traj lists.
-            self._current_traj_raw_data = []
+        msg_goal = np.array([msg.states[-1].x[0], msg.states[-1].x[1], msg.states[-1].x[2]])
+        self._current_goal = msg_goal
 
     # Timer callback.
     def TimerCallback(self, event):
@@ -253,12 +232,11 @@ class DataLogger(object):
             return
 
         # Log collision time.
-        if self.Angle() < self._max_angle:
-            self._best_collision_time = min(self._best_collision_time, self.CollisionTime())
+        self._min_collision_times.append(self.CollisionTime())
 
         # Log distance.
         print "Distance between human and robot: ", self.Distance()
-        self._best_distance = min(self._best_distance, self.Distance())
+        self._min_distances.append(self.Distance())
 
         # Log positions.
         self._current_traj_raw_data.append({"human_position" : self._human_position,
@@ -271,16 +249,6 @@ class DataLogger(object):
             return float("inf")
         return np.linalg.norm((self._human_position - self._robot_position)[:-1])
 
-    # Compute the angle between human-robot velocity and human-to-robot direction.
-    def Angle(self):
-        if self._human_position is None or self._robot_position is None:
-            return float("inf")
-
-        direction = self._human_position - self._robot_position
-        velocity = self._human_velocity - self._robot_velocity
-        return np.arccos(np.dot(direction[:-1], velocity[:-1]) /
-                         (np.linalg.norm(velocity[:-1])* np.linalg.norm(direction[:-1])))
-
     # Compute human's time to collision with robot's plane.
     def CollisionTime(self):
         if self._human_position is None or self._robot_position is None:
@@ -288,31 +256,36 @@ class DataLogger(object):
 
         direction = self._human_position - self._robot_position
         velocity = self._human_velocity - self._robot_velocity
-        return np.linalg.norm(direction[:-1])**2 / np.dot(direction[:-1], velocity[:-1])
+
+        angle = np.arccos(np.dot(direction[:-1], velocity[:-1]) /
+                         (np.linalg.norm(velocity[:-1])* np.linalg.norm(direction[:-1])))
+
+        if angle < self._max_angle:
+            return np.linalg.norm(direction[:-1])**2 / np.dot(direction[:-1], velocity[:-1])
+        else:
+            return float("inf")
 
     # Save to disk.
     def Save(self):
-        # Append results for current trajectory.
-        self._traj_times.append((rospy.Time.now() - self._start_time).to_sec())
-        self._min_collision_times.append(self._best_collision_time)
-        self._min_distances.append(self._best_distance)
-        self._raw_data.append(self._current_traj_raw_data)
+        num_samples = len(self._min_distances)
 
-        num_samples = min([len(self._traj_times), len(self._min_distances), len(self._min_collision_times)])
-
-        if (len(self._traj_times) != len(self._min_collision_times) or 
-            len(self._traj_times) != len(self._min_distances)):
-            rospy.logwarn("%s: Number of trajectories and collision times do not match.",
-                          self._name)
+        if (len(self._current_traj_raw_data) != len(self._min_collision_times) or 
+            len(self._current_traj_raw_data) != len(self._min_distances)):
+            rospy.logwarn("%s: Number of trajectories and collision times do not match.", self._name)
 
         # Columns will be as follows: min_collision_time | min_distance | traj_time.
         table = np.zeros((num_samples, 3))
         for ii in range(num_samples):
             table[ii, 0] = self._min_collision_times[ii]
             table[ii, 1] = self._min_distances[ii]
-            table[ii, 2] = self._traj_times[ii]
+            table[ii, 2] = self._current_traj_raw_data[ii]["time"]
         print "table: ", table
+        print "start, end time: ", self._start_time, self._end_time
+        print "trajectory time: ", (self._end_time - self._start_time).to_sec()
+        
         # Save.
-        #np.savetxt(self._metrics_file_name, table)
-        #pickle.dump(self._raw_data, open(self._positions_file_name, "wb"))
-        #rospy.loginfo("%s: Successfully saved data to disk.", self._name)
+        rospack = rospkg.RosPack()
+        path = rospack.get_path('data_logger') + "/data/"
+        np.savetxt(path + self._metrics_file_name + ".txt", table)
+        pickle.dump((self._min_collision_times, self._min_distances, self._current_traj_raw_data), open(path + self._metrics_file_name + ".py", "wb"))
+        rospy.loginfo("%s: Successfully saved data to disk.", self._name)

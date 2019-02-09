@@ -51,25 +51,30 @@ def sigint_handler(sig, frame):
 signal.signal(signal.SIGINT, sigint_handler)
 
 # Set up processes and let it go.
+
 # (1) Launch the crazyflies.
 robot_launch = subprocess.Popen(["roslaunch", "fastpeople", "software_demo_single.launch"])
 
-# (2) Wait a fixed amount of time (s) before calling takeoff.
-TIME_BEFORE_TAKEOFF = 3.0
+# (2) Wait a fixed amount of time (s) before calling the data logger.
+TIME_BEFORE_LOGGER = 1.0
+time.sleep(TIME_BEFORE_LOGGER)
+
+# (3) Initiate data logger.
+data_logger = subprocess.Popen(["roslaunch", "data_logger", "logger.launch"])
+
+# (4) Wait a fixed amount of time (s) before calling takeoff.
+TIME_BEFORE_TAKEOFF = 1.0
 time.sleep(TIME_BEFORE_TAKEOFF)
 
-# (3) Send takeoff signal.
+# (5) Send takeoff signal.
 takeoff = subprocess.Popen(["rosservice", "call", "takeoffHY4"])
 
-# (4) Wait a fixed amount of time for takeoff to initiate before starting human motion predictor.
-TIME_BEFORE_HUMAN = 3.0
+# (6) Wait a fixed amount of time for takeoff to initiate before starting human motion predictor.
+TIME_BEFORE_HUMAN = 2.0
 time.sleep(TIME_BEFORE_HUMAN)
 
-# (5) Initiate human predictor.
+# (7) Initiate human predictor.
 human_launch = subprocess.Popen(["roslaunch", "crazyflie_human", "simulated_demo_single.launch"])
-
-# (6) Initiate data logger.
-data_logger = subprocess.Popen(["roslaunch", "data_logger", "logger.launch"])
 
 signal.pause()
 
