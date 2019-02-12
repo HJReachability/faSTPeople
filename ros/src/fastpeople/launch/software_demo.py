@@ -70,7 +70,7 @@ time.sleep(TIME_BEFORE_TAKEOFF)
 takeoff = subprocess.Popen(["rosservice", "call", "takeoffHY4"])
 
 # (6) Wait a fixed amount of time for takeoff to initiate before starting human motion predictor.
-TIME_BEFORE_HUMAN = 2.0
+TIME_BEFORE_HUMAN = 1.0
 time.sleep(TIME_BEFORE_HUMAN)
 
 # (7) Initiate human predictor.

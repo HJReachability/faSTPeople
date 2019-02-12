@@ -66,7 +66,7 @@ class DataLogger(object):
         self._current_traj_raw_data = []
 
         # Start and end time and current goal of current trajectory.
-        self._start_time = None
+        self._start_time = rospy.Time.now()
         self._end_time = None
         self._current_goal = None
         self._reached_goal = False
@@ -133,6 +133,11 @@ class DataLogger(object):
             return False
         self._metrics_file_name = rospy.get_param("~metrics_file_name")
 
+        # Current goal
+        if not rospy.has_param("~goal_x"):
+            return False
+        self._current_goal = [float(rospy.get_param("~goal_x")), float(rospy.get_param("~goal_y")), float(rospy.get_param("~goal_z"))]
+
         return True
 
     def RegisterCallbacks(self):
@@ -145,9 +150,9 @@ class DataLogger(object):
                                            crazyflie_msgs.msg.PositionVelocityYawStateStamped,
                                            self.RobotCallback)
 
-        self._traj_request_sub = rospy.Subscriber(self._traj_request_topic,
-                                                  fastrack_msgs.msg.Trajectory,
-                                                  self.TrajectoryRequestCallback)
+        #self._traj_request_sub = rospy.Subscriber(self._traj_request_topic,
+        #                                          fastrack_msgs.msg.Trajectory,
+        #                                          self.TrajectoryRequestCallback)
 
         # Timer.
         self._timer = rospy.Timer(rospy.Duration(self._time_step), self.TimerCallback)
@@ -167,10 +172,6 @@ class DataLogger(object):
             self._robot_velocity = np.array([0.0, 0.0, 0.0])
             self._robot_time = msg.header.stamp
 
-            # Catch the first one.
-            right_now = rospy.Time.now()
-            if self._start_time is None:
-                self._start_time = right_now
         else:
             dt = (msg.header.stamp - self._robot_time).to_sec()
             velocity = (position - self._robot_position) / dt
@@ -182,7 +183,8 @@ class DataLogger(object):
             # Check if we've reached the goal.
             if not self._reached_goal and self._current_goal is not None and np.linalg.norm(self._robot_position - self._current_goal) < 5e-2:
                 self._reached_goal = True
-                self._end_time = self._robot_time
+                right_now = rospy.Time.now()
+                self._end_time = right_now
 
     # Update human position and velocity.
     def HumanCallback(self, msg):

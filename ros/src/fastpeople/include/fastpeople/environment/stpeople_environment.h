@@ -219,8 +219,8 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position,
     constexpr double kSmallNumber = 1e-8;
     if (integrated_prob > 1.0 + kSmallNumber ||
         integrated_prob < -kSmallNumber) {
-      throw std::runtime_error("Invalid probability encountered: " +
-                               std::to_string(integrated_prob));
+      //throw std::runtime_error("Invalid probability encountered: " +
+      //                         std::to_string(integrated_prob));
     }
 
     noisyOR_complement *= 1.0 - integrated_prob;
@@ -248,8 +248,8 @@ double STPeopleEnvironment<S>::HumanCollisionProbability(const Vector3d& positio
     constexpr double kSmallNumber = 1e-8;
     if (integrated_prob > 1.0 + kSmallNumber ||
         integrated_prob < -kSmallNumber) {
-      throw std::runtime_error("Invalid probability encountered: " +
-                               std::to_string(integrated_prob));
+      //throw std::runtime_error("Invalid probability encountered: " +
+      //                         std::to_string(integrated_prob));
     }
 
     noisyOR_complement *= 1.0 - integrated_prob;

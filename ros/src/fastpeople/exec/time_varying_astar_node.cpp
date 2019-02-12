@@ -49,6 +49,8 @@
 #include <fastrack_srvs/KinematicPlannerDynamics.h>
 
 #include <ros/ros.h>
+#include <iostream>
+using namespace std;
 
 namespace fp = fastrack::planning;
 namespace fs = fastrack::state;
@@ -70,7 +72,7 @@ int main(int argc, char** argv) {
               ros::this_node::getName().c_str());
     return EXIT_FAILURE;
   }
-
+  
   ros::spin();
 
   return EXIT_SUCCESS;

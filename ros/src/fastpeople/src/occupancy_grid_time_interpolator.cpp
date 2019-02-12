@@ -85,8 +85,8 @@ OccupancyGridTimeInterpolator::OccupancyGridTimeInterpolator(
       std::accumulate(std::begin(grid.data), std::end(grid.data), 0.0);
     constexpr double kSmallNumber = 1e-4;
     if (total_probability > 1.0 + kSmallNumber) {
-      throw std::runtime_error("Invalid occupancy grid data! Total probability: " +
-        std::to_string(total_probability));
+      //throw std::runtime_error("Invalid occupancy grid data! Total probability: " +
+      //  std::to_string(total_probability));
     }
   }
 
@@ -120,8 +120,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
   const double lo_prob = lo->second.data[FlattenIndex(lo_idx, lo->second.num_cells_y)];
   constexpr double kSmallNumber = 1e-4;
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
-    throw std::runtime_error("Invalid probability encountered: " +
-                             std::to_string(lo_prob));
+    //throw std::runtime_error("Invalid probability encountered: " +
+    //                         std::to_string(lo_prob));
   }
 
   // If 'hi' is not a valid iterator, then just return zero.
@@ -146,8 +146,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   const double hi_prob = hi->second.data[FlattenIndex(hi_idx, hi->second.num_cells_y)];
   if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber) {
-    throw std::runtime_error("Invalid probability encountered: " +
-                             std::to_string(hi_prob));
+    //throw std::runtime_error("Invalid probability encountered: " +
+    //                         std::to_string(hi_prob));
   }
 
   // Linearly interpolate in time.
@@ -199,8 +199,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
       const double prob =
 	lo->second.data[FlattenIndex(std::make_pair(ii, jj), lo->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
-        throw std::runtime_error("Invalid probability encountered: " +
-                                 std::to_string(prob));
+        //throw std::runtime_error("Invalid probability encountered: " +
+        //                         std::to_string(prob));
       }
       lo_prob += prob;
     }
@@ -208,8 +208,8 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
 
   // Sanity check if the summed probability is valid.
   if (lo_prob < -kSmallNumber || lo_prob > 1.0 + kSmallNumber) {
-    throw std::runtime_error("Invalid accumulated pre probability: " +
-                             std::to_string(lo_prob));
+    //throw std::runtime_error("Invalid accumulated pre probability: " +
+    //                         std::to_string(lo_prob));
   }
 
   // If 'hi' is not a valid iterator, then just return zero probability.
@@ -230,17 +230,17 @@ double OccupancyGridTimeInterpolator::OccupancyProbability(
       const double prob =
 	      hi->second.data[FlattenIndex(std::make_pair(ii, jj), hi->second.num_cells_y)];
       if (prob < -kSmallNumber || prob > 1.0 + kSmallNumber) {
-        throw std::runtime_error("Invalid probability encountered: " +
-                                 std::to_string(prob));
+        //throw std::runtime_error("Invalid probability encountered: " +
+        //                         std::to_string(prob));
       }
       hi_prob += prob;
     }
   }
 
   // Sanity check if the summed probability is valid.
-  if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber)
-    throw std::runtime_error("Invalid accumulated post probability: " +
-                             std::to_string(hi_prob));
+  //if (hi_prob < -kSmallNumber || hi_prob > 1.0 + kSmallNumber)
+    //throw std::runtime_error("Invalid accumulated post probability: " +
+    //                         std::to_string(hi_prob));
 
   // Linearly interpolate in time.
   const double hi_fraction = (time - lo->first) /
