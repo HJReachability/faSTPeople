@@ -237,7 +237,6 @@ class DataLogger(object):
         self._min_collision_times.append(self.CollisionTime())
 
         # Log distance.
-        print "Distance between human and robot: ", self.Distance()
         self._min_distances.append(self.Distance())
 
         # Log positions.

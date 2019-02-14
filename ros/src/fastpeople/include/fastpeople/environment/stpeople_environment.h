@@ -214,11 +214,12 @@ bool STPeopleEnvironment<S>::IsValid(const Vector3d& position,
     
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
-    const double integrated_prob =
+    double integrated_prob =
       interpolator.OccupancyProbability(position, *bound_box_ptr, time);
     constexpr double kSmallNumber = 1e-8;
     if (integrated_prob > 1.0 + kSmallNumber ||
         integrated_prob < -kSmallNumber) {
+      integrated_prob = 1.0;
       //throw std::runtime_error("Invalid probability encountered: " +
       //                         std::to_string(integrated_prob));
     }
@@ -243,11 +244,12 @@ double STPeopleEnvironment<S>::HumanCollisionProbability(const Vector3d& positio
 
     // Interpolate the human's occupancy grid in time and then integrate the
     // probability mass inside the TEB.
-    const double integrated_prob =
+    double integrated_prob =
         interpolator.OccupancyProbability(position, bound, time);
     constexpr double kSmallNumber = 1e-8;
     if (integrated_prob > 1.0 + kSmallNumber ||
         integrated_prob < -kSmallNumber) {
+      integrated_prob = 1.0;
       //throw std::runtime_error("Invalid probability encountered: " +
       //                         std::to_string(integrated_prob));
     }
