@@ -242,7 +242,7 @@ Trajectory<S> TimeVaryingAStar<S, E, B, SB>::Plan(const S& start, const S& end,
   // that hovers at the start point. Used in case of failure.
   constexpr double kHoverTime = 10.0; // s
   const Trajectory<S> backup_traj =
-    (CollisionCheck(most_recent_traj_, start_time)) ? most_recent_traj_ :
+    //(CollisionCheck(most_recent_traj_, start_time)) ? most_recent_traj_ :
     Trajectory<S>(std::vector<S>({start, start}),
 		  std::vector<double>({start_time, start_time + kHoverTime}));
   
