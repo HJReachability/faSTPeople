@@ -185,12 +185,13 @@
     <arg name="start" value="[$(arg takeoff_hover_x), $(arg takeoff_hover_y), $(arg takeoff_hover_z)]" />
   </include>
 
-  <!-- Replanner. -->
+  <!-- Replanner.
   <include file="$(find fastrack)/launch/replanner.launch">
     <arg name="traj_topic" value="$(arg traj_topic)" />
     <arg name="replan_request_topic" value="$(arg replan_request_topic)" />
     <arg name="replan_srv" value="$(arg replan_srv)" />
   </include>
+  -->
 
   <!-- Control converter. -->
   <include file="$(find fastrack_crazyflie_demos)/launch/control_converter.launch">
