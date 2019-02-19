@@ -71,7 +71,7 @@
   <arg name="planner_vx" default="0.2" />
   <arg name="planner_vy" default="0.2" />
   <arg name="planner_vz" default="0.2" />
-  <arg name="planner_runtime" default="0.1" /> 
+  <arg name="planner_runtime" default="0.2" /> 
 
   <!-- Tracker params. -->
   <arg name="tracker_upper_pitch" default="0.2" />
@@ -185,7 +185,7 @@
     <arg name="start" value="[$(arg takeoff_hover_x), $(arg takeoff_hover_y), $(arg takeoff_hover_z)]" />
   </include>
 
-  <!-- Replanner.
+  <!-- Replanner.  
   <include file="$(find fastrack)/launch/replanner.launch">
     <arg name="traj_topic" value="$(arg traj_topic)" />
     <arg name="replan_request_topic" value="$(arg replan_request_topic)" />
